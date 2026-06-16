@@ -1,0 +1,144 @@
+# Quickstart
+
+This guide gets a local GroundMap workspace running with the CLI, tests, health check, and Web console.
+
+> 📦 **Example `raw/` sources are not distributed with this repository** (copyright reasons; `workspaces/*/raw/` is excluded by `.gitignore`). The example workspaces ship their full `wiki/` pages, which remain completely browsable. After a fresh clone, `k.py health` reports **~287 broken references ("raw 文件不存在" / raw file missing) — this is expected and does not mean your installation failed**; only deep links into the missing raw source blocks are unresolved.
+
+Hands-on companion examples live under `docs/examples/`; a step-by-step illustrated tutorial (Chinese) is at [docs/新手教程-手把手搭建知识库.md](新手教程-手把手搭建知识库.md).
+
+## Requirements
+
+- Python 3.10+
+- Node.js 20+
+- npm
+- Git
+
+## Install
+
+```bash
+git clone https://github.com/your-org/groundmap.git
+cd groundmap
+make setup
+```
+
+`make setup` installs Python dependencies, Web dependencies, and local Git hooks.
+
+If you prefer manual steps:
+
+```bash
+python -m pip install -r requirements-dev.txt
+cd web
+npm install
+cd ..
+bash scripts/install_hooks.sh
+```
+
+## Verify
+
+```bash
+make test
+```
+
+This runs:
+
+- Python tests,
+- Web lint,
+- Web production build,
+- knowledge base health check.
+
+On a fresh clone the health check reports ~287 broken references, all with reason "raw 文件不存在" (raw file missing). This is the expected consequence of the example `raw/` sources not being distributed (see the note at the top) — not an installation failure. The command still exits 0 and `make test` passes.
+
+Manual equivalents:
+
+```bash
+python -m pytest scripts/tests
+python scripts/k.py health --json
+cd web && npm run lint && npm run build
+```
+
+> ⚠️ **If a Web dev server is running locally, stop it before `make test` or `npm run build`.** `npm run dev` and `next build` share `web/.next/`; building over a live dev server can make it serve 404s. To check types only without a full build, run `cd web && npx tsc --noEmit`. (CI builds in a clean environment, so this only affects local runs.)
+
+## Start the Web Console
+
+```bash
+make web
+```
+
+Open [http://localhost:3006](http://localhost:3006).
+
+## Workspaces
+
+Engine code (`scripts/`, `web/`) is shared across topics; data lives under `workspaces/<name>/` with the same internal layout (`wiki/`, `raw/`, `exports/`, `my_thoughts/`, `.cache/`, `log.md`). Commands default to the `smb-ecommerce` workspace; pass `--workspace <name>` (CLI) or `KB_WORKSPACE=<name>` (Web) to switch. This repository ships `smb-ecommerce`, `rag-evolution`, and `ai-ml-demo`.
+
+## Explore the CLI
+
+All of the following work on a fresh clone (they only read the bundled `wiki/` pages):
+
+```bash
+python scripts/k.py --help
+python scripts/k.py health --json
+python scripts/k.py search "cross-border"
+python scripts/k.py list-pages --json
+python scripts/k.py list-conflicts
+python scripts/k.py list-to-update
+
+# Read a bundled wiki page: outline, then a full section
+python scripts/k.py outline wiki/sources/cac_ec_law_2018.md
+python scripts/k.py read-section wiki/sources/cac_ec_law_2018.md "核心条款"
+
+# Switch workspace
+python scripts/k.py --workspace ai-ml-demo search "transformer"
+```
+
+## Convert a Source Document
+
+The example workspaces ship without their `raw/` source material (see the note at the top), so to try the conversion step you need to bring your own document. Put redistributable source material under a workspace's `raw/articles/` or `raw/papers/` directory, then run convert and inspect the outline. Using the default `smb-ecommerce` workspace and a file named `my_article.html` as an example:
+
+```bash
+mkdir -p workspaces/smb-ecommerce/raw/articles
+cp /path/to/my_article.html workspaces/smb-ecommerce/raw/articles/
+
+# convert.py takes a repo-relative directory
+python scripts/convert.py --dir workspaces/smb-ecommerce/raw/articles --ext .html
+
+# k.py path arguments are workspace-relative (resolved under the active workspace)
+python scripts/k.py outline raw/articles/my_article.md
+```
+
+Converted markdown and `.outline.json` files are derived artifacts. Do not hand-edit them; regenerate from the original source file.
+
+## Work With an External Agent
+
+Agents should read `AGENTS.md` before making changes. The core rule is simple:
+
+- the knowledge base exposes files, scripts, and Web actions,
+- the external agent performs reasoning,
+- the repository itself does not call an LLM.
+
+## Common Problems
+
+### `python-frontmatter` is missing
+
+Run:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+### Web build cannot find dependencies
+
+Run:
+
+```bash
+cd web
+npm install
+```
+
+### Port 3006 is already in use
+
+Edit `web/package.json` and change the `-p 3006` argument in `dev` and `start`, or run:
+
+```bash
+cd web
+npm run dev -- -p 3010
+```

@@ -1,0 +1,177 @@
+
+<div class="question-banner">
+  <span class="q-label">Q3 · 同部门多口径冲突</span>
+  <p class="q-text">中国 2024 全年跨境电商进出口总额是多少？</p>
+  <div class="q-meta">查询特征：政府官方数据 · 看似"权威 = 唯一"但实际两个部门口径差 3.2 pp</div>
+</div>
+
+<div class="graph-section">
+  <h3>Agent 页面遍历图</h3>
+  <svg class="graph-svg" viewBox="0 0 1040 180" xmlns="http://www.w3.org/2000/svg">
+    <g font-family="-apple-system" font-size="11">
+      <circle cx="60" cy="90" r="22" fill="#fff" stroke="#a3a3a3" stroke-width="2"/>
+      <text x="60" y="94" text-anchor="middle" fill="#6b7280" font-weight="600">USER</text>
+      <circle cx="200" cy="90" r="26" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+      <text x="200" y="86" text-anchor="middle" fill="#1e40af" font-weight="700">SEARCH</text>
+      <text x="200" y="100" text-anchor="middle" fill="#1e40af" font-size="9">6 hits</text>
+      <circle cx="380" cy="60" r="30" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="380" y="55" text-anchor="middle" fill="#15803d" font-weight="700">concept</text>
+      <text x="380" y="68" text-anchor="middle" fill="#15803d" font-size="9">cross_border</text>
+      <text x="380" y="78" text-anchor="middle" fill="#15803d" font-size="9">_ecommerce</text>
+      <circle cx="560" cy="90" r="26" fill="#fef3c7" stroke="#d97706" stroke-width="2.5"/>
+      <text x="560" y="86" text-anchor="middle" fill="#92400e" font-weight="700">CONFLICT</text>
+      <text x="560" y="100" text-anchor="middle" fill="#92400e" font-size="9">2.63 vs 2.71</text>
+      <circle cx="740" cy="60" r="32" fill="#ffe4e6" stroke="#be123c" stroke-width="2.5"/>
+      <text x="740" y="55" text-anchor="middle" fill="#be123c" font-weight="700">analysis</text>
+      <text x="740" y="68" text-anchor="middle" fill="#be123c" font-size="9">china_market_size</text>
+      <text x="740" y="78" text-anchor="middle" fill="#be123c" font-size="9">_evolution</text>
+      <circle cx="940" cy="90" r="26" fill="#fef3c7" stroke="#b45309" stroke-width="2.5"/>
+      <text x="940" y="86" text-anchor="middle" fill="#92400e" font-weight="700">ANSWER</text>
+      <text x="940" y="100" text-anchor="middle" fill="#92400e" font-size="9">含口径建议</text>
+    </g>
+    <defs>
+      <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6" fill="#6b7280"/>
+      </marker>
+    </defs>
+    <g stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#ar3)">
+      <line x1="82" y1="90" x2="172" y2="90"/>
+      <line x1="226" y1="90" x2="350" y2="65"/>
+      <line x1="410" y1="65" x2="535" y2="86"/>
+      <line x1="586" y1="86" x2="708" y2="64"/>
+      <line x1="772" y1="64" x2="912" y2="86"/>
+    </g>
+  </svg>
+</div>
+
+<div class="workflow">
+  <div class="step" data-type="search">
+    <div class="step-header"><span class="step-num">01</span><span class="step-badge">SEARCH</span><span class="step-title">BM25 搜索</span></div>
+    <div class="step-body">
+      <div><span class="label">工具调用</span><pre class="tool"><span class="k">k.py</span> search <span class="s">"中国 跨境电商 2024 万亿"</span> --json</pre></div>
+      <div><span class="label">真实返回</span>
+        <table class="response-table">
+          <tr><td class="score">53</td><td class="type source_summary">source_summary</td><td class="path">wiki/sources/mofcom_2_63_trillion_2024.md</td></tr>
+          <tr><td class="score">51</td><td class="type source_summary">source_summary</td><td class="path">wiki/sources/mofcom_digital_trade_2025.md</td></tr>
+          <tr><td class="score">40</td><td class="type analysis">analysis</td><td class="path">wiki/analyses/china_cross_border_market_size_evolution.md</td></tr>
+          <tr><td class="score">22</td><td class="type source_summary">source_summary</td><td class="path">wiki/sources/mofcom_industry_belt_2025.md</td></tr>
+          <tr class="picked"><td class="score">— </td><td class="type concept">concept</td><td class="path">wiki/concepts/cross_border_ecommerce.md  (从 outlinks 走到)</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-type="eval">
+    <div class="step-header"><span class="step-num">02</span><span class="step-badge">EVAL</span><span class="step-title">注意到 hits 里有两个 mofcom 来源</span></div>
+    <div class="step-body">
+      <div class="thinking">两个 source 都来自 mofcom（商务部）但分数接近——很可能是两个不同口径的数据。同时分析页也命中，说明确实有"市场规模演化"专题在做对比。<br/>策略：先读 concept 页拿最权威定义，再看分析页拿口径对比。</div>
+    </div>
+  </div>
+
+  <div class="step" data-type="read">
+    <div class="step-header"><span class="step-num">03</span><span class="step-badge">READ</span><span class="step-title">读 concept 页</span></div>
+    <div class="step-body">
+      <div><span class="label">工具调用</span><pre class="tool"><span class="k">read_page</span>(<span class="s">"wiki/concepts/cross_border_ecommerce"</span>)</pre></div>
+      <div>
+        <span class="label">「中国市场规模」节直接列出对比表</span>
+        <pre class="frontmatter"><span class="key">## 中国市场规模（最新口径）</span>
+
+| 年份                  | 数据                  | 来源                                     |
+| --- | --- | --- |
+<span class="val green">| 2024 全年（海关）     | 2.71 万亿元 +14%      | mofcom_digital_trade_2025#^p-617-26618b ★</span>
+<span class="val green">| 2024 全年（商务部新闻）| 2.63 万亿元 +10.8%    | mofcom_2_63_trillion_2024#^p-6-241345  ★</span>
+| 2025 H1（海关）        | 1.32 万亿元 +5.7%     | mofcom_digital_trade_2025#^p-618-ed4bd6
+| 2025 1-9 月            | +6.4%                 | mofcom_2025_jan_sep_ecommerce#^p-7-18cdb3
+
+详见冲突分析：[[wiki/analyses/china_cross_border_market_size_evolution]]</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-type="conflict">
+    <div class="step-header"><span class="step-num">04</span><span class="step-badge">CONFLICT</span><span class="step-title">识别同年份两个数字</span></div>
+    <div class="step-body">
+      <div class="conflict-warn">
+        <span class="label">⚠️ 同部门多口径冲突</span>
+        2024 全年同一个年份，两个官方部门给出不同数字：<br>
+        · 商务部新闻：2.63 万亿元 +10.8%<br>
+        · 海关总署（最终报告）：2.71 万亿元 +14%<br>
+        差异 ~0.08 万亿（$11.2B）+ 增速差 3.2 pp。差异不能忽略——投资估值 / 合同金额这类用途，差几个 pp 就差钱。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-type="link">
+    <div class="step-header"><span class="step-num">05</span><span class="step-badge">LINK</span><span class="step-title">跟随分析页指针</span></div>
+    <div class="step-body">
+      <div><span class="label">工具调用</span><pre class="tool"><span class="k">outlinks</span>(<span class="s">"wiki/concepts/cross_border_ecommerce"</span>)</pre></div>
+      <div class="thinking">concept 页结尾标了"详见冲突分析"——这是设计承诺：含冲突的概念必有 analysis 页消化。读它。</div>
+    </div>
+  </div>
+
+  <div class="step" data-type="read">
+    <div class="step-header"><span class="step-num">06</span><span class="step-badge">READ</span><span class="step-title">读 analysis 页</span></div>
+    <div class="step-body">
+      <div><span class="label">工具调用</span><pre class="tool"><span class="k">read_page</span>(<span class="s">"wiki/analyses/china_cross_border_market_size_evolution"</span>)</pre></div>
+      <div>
+        <span class="label">页面有 2 个独立冲突块 + 1 个完整时间线表</span>
+      </div>
+      <div class="conflict-warn">
+        <span class="label">⚠️ 知识更新冲突 — 同年份不同口径</span>
+        <strong>商务部口径</strong>（2.63 万亿、+10.8%）— 发布于 2025 上半年，<em>快报性质</em><br>
+        <strong>海关总署口径</strong>（2.71 万亿、+14%）— 发布于 2025-10，<em>最终核算</em><br>
+        <strong>AI 判断</strong>：初步统计 vs 最终核算差异最合理；商务部初版基于阶段性数据，海关版包含全年 9610/1210/9710/9810 全部 4 个监管代码的最终汇总。<br>
+        <strong>使用建议</strong>：引用绝对值用海关版 2.71 万亿（最终核算更权威）；引用增速趋势用商务部版（与 2025 增速 6.4% 同口径，可比较）。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-type="extract">
+    <div class="step-header"><span class="step-num">07</span><span class="step-badge">EXTRACT</span><span class="step-title">抽取完整时间线 + 增速演化</span></div>
+    <div class="step-body">
+      <div class="extract-box">
+        <span class="label">5 行数据矩阵 — 时间窗 / 数值 / 增速 / 部门</span>
+        <ul>
+          <li>2024 前 3 季：1.88 万亿（+11.5%）· 商务部</li>
+          <li><strong>2024 全年：2.63 万亿（+10.8%）· 商务部新闻</strong></li>
+          <li><strong>2024 全年：2.71 万亿（+14%）· 海关总署</strong></li>
+          <li>2025 H1：1.32 万亿（+5.7%）· 海关总署</li>
+          <li>2025 1-9 月：+6.4% · 海关总署 ← <strong>增速腰斩信号</strong></li>
+        </ul>
+      </div>
+      <div class="thinking">不仅有冲突还有第二个信号：2024 全年 +10.8% / +14% → 2025 1-9 月 +6.4%，<strong>增速腰斩</strong>。时间窗与美国 De Minimis 取消（5 月、8 月）高度吻合——这是宏观层的"政策冲击实证"。</div>
+    </div>
+  </div>
+
+  <div class="step" data-type="answer">
+    <div class="step-header"><span class="step-num">08</span><span class="step-badge">ANSWER</span><span class="step-title">把两个口径 + 推荐 + 宏观信号都给</span></div>
+    <div class="step-body">
+      <div class="answer-panel">
+        <h3>Agent 最终回复</h3>
+        <p>有<strong>两个"官方"数字</strong>，要看你用途：</p>
+        <ul>
+          <li><strong>2.71 万亿元 +14%</strong>（海关总署，最终核算，2025-10 发布） <span class="citation">[[raw/papers/mofcom_digital_trade_2025#^p-617-26618b]]</span></li>
+          <li><strong>2.63 万亿元 +10.8%</strong>（商务部新闻，快报性质，2025 上半年发布） <span class="citation">[[raw/articles/mofcom_2_63_trillion_2024#^p-6-241345]]</span></li>
+        </ul>
+        <h4>使用建议</h4>
+        <ul>
+          <li>需要绝对值（合同 / 投资估值）→ 用 <strong>2.71 万亿</strong>（最终核算，方法学一致）</li>
+          <li>需要增速对比（2024 vs 2025）→ 用 <strong>商务部 +10.8%</strong>（与 2025 同口径可比）</li>
+        </ul>
+        <h4>关键宏观信号（顺带提）</h4>
+        <p>2025 增速从 +14% / +10.8% <strong>腰斩到 +6.4%</strong>，时间窗与美国 De Minimis 取消高度吻合。建议跟踪 2026 H1 数据看反弹。</p>
+        <p>详细演化：<span class="citation">[[wiki/analyses/china_cross_border_market_size_evolution]]</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="rag-compare">
+  <span class="label">⚠️ 传统 chunk-RAG 会怎样</span>
+  <p>1. embedding 召回大概率把两个 chunk（2.63 vs 2.71）都拿到</p>
+  <p>2. LLM 看不到结构语义（哪个是商务部 / 哪个是海关 / 哪个是快报 / 哪个是最终）— 只能从 chunk 内文字里推</p>
+  <p>3. 多数模型会"折中"：报"约 2.65-2.7 万亿"——<strong>两边都不准、还掩盖了官方部门差异</strong></p>
+  <p>4. 缺少"使用建议"维度：哪个口径用于绝对值 / 哪个用于增速对比——这是用户真正要的指导</p>
+</div>
+
+</div>

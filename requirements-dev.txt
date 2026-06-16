@@ -1,0 +1,3 @@
+-r requirements.txt
+pytest
+markdown          # 仅用于 scripts/build_tutorial_html.py 把新手教程渲染成 HTML

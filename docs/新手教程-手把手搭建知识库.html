@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>手把手搭建并使用 GroundMap 知识库（零基础图文教程）</title>
+<style>
+:root{
+  --accent:#d9770a; --accent-soft:#fff7ed; --accent-line:#fdba74;
+  --bg:#ffffff; --text:#1f2733; --muted:#6b7785; --border:#e7ebf0;
+  --code-bg:#0f1729; --code-text:#e6edf3; --inline-bg:#f1f4f8; --inline-text:#b4451f;
+  --sidebar-bg:#fbfcfe; --row:#f8fafc;
+  --maxw:880px; --sidew:300px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, Consolas, "Liberation Mono", monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);
+  font-size:16px;line-height:1.78;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---------- 布局 ---------- */
+.layout{display:flex;align-items:flex-start;max-width:calc(var(--maxw) + var(--sidew) + 80px);margin:0 auto}
+.sidebar{position:sticky;top:0;flex:0 0 var(--sidew);width:var(--sidew);height:100vh;
+  overflow-y:auto;border-right:1px solid var(--border);background:var(--sidebar-bg);padding:22px 18px 60px}
+.sidebar .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;letter-spacing:.2px;margin:4px 6px 4px}
+.sidebar .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.sidebar .tagline{color:var(--muted);font-size:12px;margin:0 6px 16px;line-height:1.5}
+.sidebar nav .toc>ul{list-style:none;margin:0;padding:0}
+.sidebar nav ul ul{list-style:none;margin:0;padding-left:14px}
+.sidebar nav li{margin:1px 0}
+.sidebar nav a{display:block;padding:5px 10px;border-radius:7px;color:#3b4655;font-size:13.5px;line-height:1.45;
+  border-left:2px solid transparent;transition:background .12s,color .12s}
+.sidebar nav a:hover{background:#eef2f7;text-decoration:none}
+.sidebar nav ul ul a{font-size:12.5px;color:var(--muted);padding:3px 10px}
+.sidebar nav a.active{background:var(--accent-soft);color:var(--accent);font-weight:600;border-left-color:var(--accent)}
+
+.content{flex:1 1 auto;min-width:0;max-width:var(--maxw);padding:40px 40px 120px;margin:0 auto}
+
+/* ---------- 排版 ---------- */
+.content h1{font-size:30px;line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:-.01em}
+.content h2{font-size:23px;font-weight:750;margin:46px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--border);scroll-margin-top:18px}
+.content h3{font-size:18.5px;font-weight:700;margin:30px 0 10px;color:#283342;scroll-margin-top:18px}
+.content h4{font-size:15.5px;font-weight:700;margin:22px 0 8px;color:#37424f}
+.content h2 .headerlink,.content h3 .headerlink{opacity:0;margin-left:8px;color:var(--accent-line);font-weight:400;text-decoration:none}
+.content h2:hover .headerlink,.content h3:hover .headerlink{opacity:1}
+.content p{margin:13px 0}
+.content ul,.content ol{margin:12px 0;padding-left:24px}
+.content li{margin:5px 0}
+.content li>ul,.content li>ol{margin:5px 0}
+.content hr{border:0;border-top:1px solid var(--border);margin:40px 0}
+.content strong{font-weight:700;color:#11161d}
+
+/* 行内 / 代码块 */
+.content code{font-family:var(--mono);font-size:.88em;background:var(--inline-bg);color:var(--inline-text);
+  padding:.12em .42em;border-radius:5px;border:1px solid #e3e8ef}
+.content pre{background:var(--code-bg);color:var(--code-text);padding:18px 20px;border-radius:12px;
+  overflow-x:auto;margin:18px 0;line-height:1.6;box-shadow:0 1px 2px rgba(15,23,41,.18)}
+.content pre code{background:none;color:inherit;border:0;padding:0;font-size:13px;white-space:pre;
+  font-variant-ligatures:none}
+
+/* 表格 */
+.content table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14.5px;
+  border:1px solid var(--border);border-radius:10px;overflow:hidden;display:table}
+.content thead th{background:#f3f6fa;text-align:left;font-weight:700;color:#283342}
+.content th,.content td{border-bottom:1px solid var(--border);padding:9px 13px;vertical-align:top}
+.content tbody tr:nth-child(2n){background:var(--row)}
+.content tbody tr:last-child td{border-bottom:0}
+
+/* 引用框 / callout（颜色由 JS 按首个 emoji 赋类） */
+.content blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--accent-line);
+  background:var(--accent-soft);border-radius:0 10px 10px 0;color:#3b3326}
+.content blockquote p{margin:6px 0}
+.content blockquote.info{border-left-color:#60a5fa;background:#eff6ff;color:#1e3a5f}
+.content blockquote.tip{border-left-color:#34d399;background:#ecfdf5;color:#14532d}
+.content blockquote.warn{border-left-color:#fbbf24;background:#fffbeb;color:#713f12}
+.content blockquote.danger{border-left-color:#f87171;background:#fef2f2;color:#7f1d1d}
+.content blockquote.note{border-left-color:#a78bfa;background:#f5f3ff;color:#4c1d95}
+
+/* 图片 / 截图 */
+.content figure{margin:24px 0;text-align:center}
+.content figure img{max-width:100%;height:auto;border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 6px 24px rgba(20,30,50,.12)}
+.content figcaption{margin-top:9px;color:var(--muted);font-size:13px;font-style:italic}
+
+/* 顶部移动端目录按钮 */
+.menu-toggle{display:none}
+
+@media (max-width:1040px){
+  .layout{display:block}
+  .sidebar{position:fixed;left:0;top:0;z-index:50;height:100vh;width:84%;max-width:330px;
+    transform:translateX(-104%);transition:transform .22s ease;box-shadow:0 0 40px rgba(0,0,0,.18)}
+  .sidebar.open{transform:translateX(0)}
+  .content{padding:64px 20px 100px;max-width:100%}
+  .menu-toggle{display:inline-flex;align-items:center;gap:7px;position:fixed;top:12px;left:12px;z-index:60;
+    background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 13px;font-size:14px;
+    font-weight:600;color:var(--text);box-shadow:0 2px 10px rgba(0,0,0,.08);cursor:pointer}
+  .scrim{display:none;position:fixed;inset:0;background:rgba(15,23,41,.4);z-index:40}
+  .scrim.show{display:block}
+}
+</style>
+</head>
+<body>
+<button class="menu-toggle" id="menuToggle">☰ 目录</button>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="dot"></span>GroundMap</div>
+    <div class="tagline">新手图文教程 · 手把手搭建并使用知识库</div>
+    <nav><div class="toc">
+<ul>
+<li><a href="#1-先建立直觉-groundmap-到底是什么">1. 先建立直觉：GroundMap 到底是什么</a><ul>
+<li><a href="#三个-铁规矩-理解它们就理解了整个设计">三个"铁规矩"，理解它们就理解了整个设计</a></li>
+</ul>
+</li>
+<li><a href="#2-5-分钟把它跑起来">2. 5 分钟把它跑起来</a><ul>
+<li><a href="#2-1-前置条件">2.1 前置条件</a></li>
+<li><a href="#2-2-下载并安装">2.2 下载并安装</a></li>
+<li><a href="#2-3-体检一下-确认能跑">2.3 体检一下，确认能跑</a></li>
+<li><a href="#2-4-打开网页台">2.4 打开网页台</a></li>
+<li><a href="#2-5-切换主题库-workspace">2.5 切换主题库（workspace）</a></li>
+</ul>
+</li>
+<li><a href="#3-看懂一个-知识页-知识库的原子单位">3. 看懂一个"知识页"——知识库的原子单位</a><ul>
+<li><a href="#锚点与块级引用-知识库的-精确书签">锚点与块级引用：知识库的"精确书签"</a></li>
+<li><a href="#五种页面类型-一句话各是什么">五种页面类型，一句话各是什么</a></li>
+</ul>
+</li>
+<li><a href="#4-核心案例-喂一篇资料-看它如何变成知识">4. 核心案例：喂一篇资料，看它如何变成知识</a><ul>
+<li><a href="#步骤-1-把原始资料放进-raw">步骤 1️⃣：把原始资料放进 raw/</a></li>
+<li><a href="#步骤-2-转成-markdown-自动加锚点">步骤 2️⃣：转成 markdown + 自动加锚点</a></li>
+<li><a href="#步骤-3-让-ai-agent-登场-关键">步骤 3️⃣：让 AI agent 登场（关键！）</a></li>
+<li><a href="#步骤-4-agent-产出一个-来源摘要页">步骤 4️⃣：agent 产出一个"来源摘要页"</a></li>
+<li><a href="#步骤-5-连锁反应-更新核心页-标记待更新-归入索引">步骤 5️⃣：连锁反应——更新核心页、标记待更新、归入索引</a></li>
+<li><a href="#步骤-6-验收-确认知识真的-长-进库里了">步骤 6️⃣：验收——确认知识真的"长"进库里了</a></li>
+<li><a href="#这一章的小结-raw-wiki-全流程">这一章的小结：raw → wiki 全流程</a></li>
+</ul>
+</li>
+<li><a href="#5-知识库建好后-怎么用它">5. 知识库建好后，怎么用它</a><ul>
+<li><a href="#5-1-浏览与查询-像研究员一样钻取">5.1 浏览与查询：像研究员一样钻取</a></li>
+<li><a href="#5-2-知识图谱-一眼看清知识的关系网">5.2 知识图谱：一眼看清知识的关系网</a></li>
+<li><a href="#5-3-健康度仪表板-知识库的-体检报告">5.3 健康度仪表板：知识库的"体检报告"</a></li>
+<li><a href="#5-4-冲突工作台-新旧资料打架了怎么办">5.4 冲突工作台：新旧资料打架了怎么办</a></li>
+</ul>
+</li>
+<li><a href="#6-日常维护-让知识库长期不腐烂">6. 日常维护：让知识库长期不腐烂</a></li>
+<li><a href="#7-建你自己的知识库-从零开一个新主题">7. 建你自己的知识库：从零开一个新主题</a><ul>
+<li><a href="#7-1-一条命令生成骨架">7.1 一条命令生成骨架</a></li>
+<li><a href="#7-2-喂第一批资料">7.2 喂第一批资料</a></li>
+<li><a href="#7-3-让-agent-摄入">7.3 让 agent 摄入</a></li>
+<li><a href="#7-4-在网页台看你的库">7.4 在网页台看你的库</a></li>
+</ul>
+</li>
+<li><a href="#8-进阶-按需">8. 进阶（按需）</a></li>
+<li><a href="#9-常见问题排错">9. 常见问题排错</a></li>
+<li><a href="#10-附录-一图看懂整个工作流">10. 附录：一图看懂整个工作流</a></li>
+</ul>
+</div>
+</nav>
+  </aside>
+  <main class="content">
+<h1 id="手把手搭建并使用-groundmap-知识库-零基础图文教程">手把手搭建并使用 GroundMap 知识库（零基础图文教程）<a class="headerlink" href="#手把手搭建并使用-groundmap-知识库-零基础图文教程" title="Permanent link">#</a></h1>
+<blockquote>
+<p>这份教程写给<strong>完全没接触过这个项目的新手</strong>。读完你会明白：这个知识库是<strong>一步一步怎么搭起来的</strong>、搭好以后<strong>怎么用、怎么转</strong>。全程配真实截图，并用<strong>完整案例</strong>从头走到尾——既有现成的讲解案例（一篇 SHEIN 统计报告如何变成可追溯的知识），也有配套示例文章让你<strong>亲手跟做一遍</strong>，最后教你从零开一个自己主题的库。</p>
+<p><strong>需要的基础</strong>：几乎为零。你只要会在终端里复制粘贴命令、会用浏览器即可。看不懂的名词，文中第一次出现时都会用大白话解释。</p>
+<p><strong>配套</strong>：项目里还内置了一个<strong>网页版互动教程</strong>（顶栏「教学」/ <code>/learn</code>），可以在浏览器里点着学，和本文互补。</p>
+</blockquote>
+<hr />
+<hr />
+<h2 id="1-先建立直觉-groundmap-到底是什么">1. 先建立直觉：GroundMap 到底是什么<a class="headerlink" href="#1-先建立直觉-groundmap-到底是什么" title="Permanent link">#</a></h2>
+<p>先别管代码。用一个比喻就懂了：</p>
+<blockquote>
+<p><strong>GroundMap = 一座图书馆 + 一位 AI 管理员 + 一本永远可追溯的笔记本。</strong></p>
+</blockquote>
+<ul>
+<li><strong>你</strong>：往图书馆塞原始资料（论文、报告、网页、政策文件……），并提问。</li>
+<li><strong>AI 管理员（外部 agent，比如 Claude Code）</strong>：读这些原始资料，把要点<strong>整理成结构化的 wiki 笔记</strong>，而且<strong>每一句话都标明出处</strong>（来自哪份资料的哪一段）。</li>
+<li><strong>系统本身（<code>scripts/</code> 里的 <code>k.py</code> + <code>web/</code> 网页台）</strong>：只负责<strong>给工具</strong>——转换格式、加书签（锚点）、搜索、画关系图、体检——它<strong>自己从不思考、不调用任何 AI</strong>。</li>
+</ul>
+<h3 id="三个-铁规矩-理解它们就理解了整个设计">三个"铁规矩"，理解它们就理解了整个设计<a class="headerlink" href="#三个-铁规矩-理解它们就理解了整个设计" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>规矩</th>
+<th>大白话</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>markdown + Git 是唯一真相</strong></td>
+<td>所有知识就是一堆纯文本 <code>.md</code> 文件，用 Git 存。删掉所有代码、所有缓存，知识本身还在、还能读。</td>
+<td>永不被某个工具/某个模型"锁死"。十年后用记事本也能打开。</td>
+</tr>
+<tr>
+<td><strong>系统不调用 LLM、不用 embedding</strong></td>
+<td>知识库自己不接 AI、不做"向量召回"。检索靠<strong>全文关键词 + 元数据过滤 + 让 agent 读完整页面</strong>。</td>
+<td>可解释、可复现、零幻觉风险。详见 <a href="why-no-embeddings.md"><code>why-no-embeddings.md</code></a>。</td>
+</tr>
+<tr>
+<td><strong>每条论断必须能溯源</strong></td>
+<td>wiki 里写"SHEIN 估值 660 亿美元"，后面必须挂一个链接，<strong>精确指向原始报告的那一段</strong>。</td>
+<td>知识可信、可核查，而不是"AI 说的，不知道哪来的"。</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>📌 <strong>和传统 RAG 的关键区别</strong>：常见的"chunk + embedding" RAG 把文档切碎、转成向量，检索时返回一些<strong>零碎片段</strong>，换个模型就得全量重算。GroundMap 反过来——<strong>永远返回完整页面或完整章节</strong>，知识以人能读懂的 markdown 形式沉淀下来，不进任何"换模型就作废"的黑盒。</p>
+</blockquote>
+<p>记住这个三角关系，下面的一切都顺理成章：</p>
+<pre><code>        ┌─────────────┐   放资料 / 提问    ┌──────────────────────┐
+        │     你       │ ───────────────▶ │  AI 管理员（外部 agent） │
+        └─────────────┘                   │   读资料 → 写 wiki      │
+              ▲                            │   每句话都标出处         │
+              │ 看 wiki / 图谱 / 体检        └───────────┬──────────┘
+              │                                         │ 用工具
+        ┌─────┴───────────────────────────────────────▼──────┐
+        │   系统（k.py + 网页台）：转换 / 锚点 / 搜索 / 图谱 / 体检   │
+        │   —— 只给工具，自己从不调用 AI                          │
+        └────────────────────────────────────────────────────┘
+</code></pre>
+<hr />
+<h2 id="2-5-分钟把它跑起来">2. 5 分钟把它跑起来<a class="headerlink" href="#2-5-分钟把它跑起来" title="Permanent link">#</a></h2>
+<h3 id="2-1-前置条件">2.1 前置条件<a class="headerlink" href="#2-1-前置条件" title="Permanent link">#</a></h3>
+<p>装好这几样（装过就跳过）：</p>
+<ul>
+<li><strong>Python 3.10 以上</strong></li>
+<li><strong>Node.js 20 以上</strong> + <strong>npm</strong></li>
+<li><strong>Git</strong></li>
+<li><strong>一个 AI 编程助手</strong>（第 4 章摄入资料时才用到，可以先装好）：推荐 <a href="https://claude.com/claude-code">Claude Code</a>——在终端运行 <code>npm install -g @anthropic-ai/claude-code</code> 安装，之后在任意目录输入 <code>claude</code> 即可进入对话。用 Cursor、Codex 等其他 agent 也完全可以。</li>
+</ul>
+<blockquote>
+<p>💡 <strong>小贴士</strong>：
+- 本文所有命令里的 <code>python</code>，在部分系统（如 macOS 自带环境）上叫 <code>python3</code>。如果敲 <code>python</code> 提示 command not found，就把命令里的 <code>python</code> 换成 <code>python3</code>，其余不变。
+- <code>make</code> 在 macOS / Linux 一般自带；Windows 用户建议在 WSL 里操作，或直接用下文给出的"手动等价命令"。</p>
+</blockquote>
+<h3 id="2-2-下载并安装">2.2 下载并安装<a class="headerlink" href="#2-2-下载并安装" title="Permanent link">#</a></h3>
+<pre><code class="language-bash">git clone &lt;仓库地址&gt; groundmap
+cd groundmap
+make setup
+</code></pre>
+<blockquote>
+<p><code>&lt;仓库地址&gt;</code> 替换成本项目在 GitHub 上的地址——打开项目主页，点绿色 <strong>Code</strong> 按钮复制即可。如果你是直接下载的 zip 包，解压后 <code>cd</code> 进目录从 <code>make setup</code> 开始。</p>
+</blockquote>
+<p><code>make setup</code> 会一次性装好：Python 依赖、网页台依赖、本地 Git 钩子。</p>
+<blockquote>
+<p>如果你不想用 <code>make</code>，手动三步等价：
+<code>bash
+python -m pip install -r requirements-dev.txt   # Python 依赖
+cd web &amp;&amp; npm install &amp;&amp; cd ..                  # 网页台依赖
+bash scripts/install_hooks.sh                   # Git 钩子（写权限第二道防线）</code></p>
+</blockquote>
+<h3 id="2-3-体检一下-确认能跑">2.3 体检一下，确认能跑<a class="headerlink" href="#2-3-体检一下-确认能跑" title="Permanent link">#</a></h3>
+<pre><code class="language-bash">python scripts/k.py health --json
+</code></pre>
+<p>只要命令输出一串 JSON、其中 <code>"total_pages": 56</code>，就说明引擎正常。</p>
+<blockquote>
+<p>⚠️ <strong>新克隆仓库会看到约 287 条"失效引用"，这是预期现象，不代表装坏了。</strong>
+示例库的 <code>raw/</code> 原始资料（那些被整理过的报告、文章原文）<strong>不随仓库分发</strong>——它们可能含第三方版权内容，所以被 <code>.gitignore</code> 留在了作者本地。你克隆下来的是整理好的 <code>wiki/</code> 知识页。于是 wiki 里那些指向 raw 原文的引用就成了"查无此文件"，<code>health</code> 会如实报告 <code>"broken_refs_count": 287</code>、原因清一色是 <code>raw 文件不存在</code>。
+判断标准就一条：<strong>命令能跑出 JSON、<code>total_pages</code> 是 56，引擎就是好的</strong>。等你在第 4 章放入自己的资料后，自己的引用链路是完整的。</p>
+</blockquote>
+<h3 id="2-4-打开网页台">2.4 打开网页台<a class="headerlink" href="#2-4-打开网页台" title="Permanent link">#</a></h3>
+<pre><code class="language-bash">make web
+</code></pre>
+<p>浏览器打开 <strong>http://localhost:3006</strong> ，你会看到这个界面：</p>
+<figure><img alt="GroundMap 首页" src="images/tutorial/01-home.png" /><figcaption>首页 = 知识库的"大堂"。这是 <code>smb-ecommerce</code>（跨境电商）示例库。</figcaption></figure>
+<p>逐区域认识一下（<strong>记住这个布局，后面都用得到</strong>）：</p>
+<ul>
+<li><strong>顶栏</strong>：<code>浏览</code> <code>健康度</code> <code>图谱</code> <code>教学</code> <code>查询讲解</code> —— 知识库的几大功能入口。右边是 <strong>workspace 切换器</strong>（当前 <code>smb-ecommerce</code>）和 <strong>中/EN 语言切换</strong>。</li>
+<li>顶栏还有一个 <code>查询控制台</code>：它<strong>不是</strong>网页台的内置页面，而是一个可选的独立调试子工具（跑在 3100 端口）。现在点它会"连接失败"——这是正常的，需要的话另开终端 <code>cd tools/debug-console &amp;&amp; npm install &amp;&amp; npm run dev</code> 启动；新手可以完全忽略它。</li>
+<li><strong>左侧栏</strong>：搜索框 + <strong>页面树</strong>（按类型分组：MOC 索引（Map of Content，"内容地图"，即主题目录页）、实体如 Amazon/SHEIN/Temu、概念……）。点任意一项进入该页。</li>
+<li><strong>中间</strong>：当前打开的是<strong>根索引</strong>（<code>root_index</code>），相当于整个知识库的"总目录"。</li>
+<li><strong>右侧栏</strong>：<strong>概览</strong>——总页面数（56）、各类统计，一眼看出库有多大、健康不健康。</li>
+</ul>
+<blockquote>
+<p>📌 <strong>重要：<code>make web</code> 会一直占用这个终端窗口</strong>（不停滚动日志），这是正常的，<strong>别关它、别在里面按 Ctrl+C</strong>（按了网页就打不开了）。后面章节的所有 <code>python scripts/k.py ...</code> 命令，请<strong>新开一个终端标签页</strong>（macOS 终端 ⌘T），并先 <code>cd</code> 回 groundmap 仓库目录再执行。</p>
+</blockquote>
+<h3 id="2-5-切换主题库-workspace">2.5 切换主题库（workspace）<a class="headerlink" href="#2-5-切换主题库-workspace" title="Permanent link">#</a></h3>
+<p>这个仓库自带 <strong>3 个示例库</strong>，用顶栏下拉随时切换、无需重启：</p>
+<ul>
+<li><code>smb-ecommerce</code>（默认）—— 跨境电商行业知识</li>
+<li><code>rag-evolution</code> —— RAG 技术演进</li>
+<li><code>ai-ml-demo</code> —— AI/ML 论文</li>
+</ul>
+<blockquote>
+<p>命令行里切库用 <code>--workspace</code>：<code>python scripts/k.py --workspace ai-ml-demo search "transformer"</code>。</p>
+</blockquote>
+<hr />
+<h2 id="3-看懂一个-知识页-知识库的原子单位">3. 看懂一个"知识页"——知识库的原子单位<a class="headerlink" href="#3-看懂一个-知识页-知识库的原子单位" title="Permanent link">#</a></h2>
+<p>知识库由一个个 <strong>wiki 页</strong>组成。先彻底看懂一页长什么样，后面就不会懵。</p>
+<p>在左侧页面树点开 <strong>SHEIN（希音）</strong> 这个实体页：</p>
+<figure><img alt="SHEIN 实体页" src="images/tutorial/02-page-entity.png" /><figcaption>一个典型的"实体页"。注意右侧的 Frontmatter 和章节大纲。</figcaption></figure>
+<p>一页分三部分：</p>
+<p><strong>① 正文（中间）</strong>
+- 标题、面包屑（<code>wiki/entities/shein</code>）。
+- 「关键数据」表格：每一行的数值后面都有一个<strong>「来源」链接</strong>（如 <code>sources/analyzify_shein_stats_2025</code>）。这就是"每条论断可溯源"的体现——你能顺着链接查到这个数字是谁说的。
+- 顶部还有 <code>编辑</code> 和 <code>Block 视图</code> 按钮（后者把整页拆成一个个带"书签"的小块）。</p>
+<p><strong>② Frontmatter（右上）—— 这一页的"身份证"</strong></p>
+<p>每个 wiki 页开头都有一段 <strong>YAML 元数据</strong>（Frontmatter，直译"前置事项"——写在文件最前面、用 <code>---</code> 包起来的几行 <code>字段: 值</code>），网页台把它渲染成右侧面板：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code></td>
+<td>页面类型（这里是 <code>entity</code> 实体）</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>状态：草稿 / 已审阅 / 已废弃</td>
+</tr>
+<tr>
+<td><code>confidence</code></td>
+<td>可信度：高 / 中 / 低</td>
+</tr>
+<tr>
+<td><code>source_count</code> / <code>sources</code></td>
+<td>这页引用了几个底层来源、分别是谁</td>
+</tr>
+<tr>
+<td><code>tags</code></td>
+<td>标签（<code>shein</code> <code>fast-fashion</code> <code>cross-border-ecommerce</code>…）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>③ 章节大纲（右下）</strong>：自动从正文标题生成，点一下就跳到对应章节。</p>
+<h3 id="锚点与块级引用-知识库的-精确书签">锚点与块级引用：知识库的"精确书签"<a class="headerlink" href="#锚点与块级引用-知识库的-精确书签" title="Permanent link">#</a></h3>
+<p>打开一个<strong>来源摘要页</strong>（<code>source_summary</code>）——在左侧页面树的「来源摘要」分组里点 <strong>Shein Revenue and Usage Statistics 2026（Business of Apps）</strong>——往下滚，看正文里的小数字上标 <code>[1] [2]</code>：</p>
+<figure><img alt="来源摘要页的块级引用" src="images/tutorial/03b-page-source-citations.png" /><figcaption>正文每条数据后面的 <code>[1][2]</code> 上标，就是"块级引用"——精确指向原始报告的某一段。</figcaption></figure>
+<p>这些上标背后是这样的语法（这是该页第 28 行的真实原文）：</p>
+<pre><code class="language-markdown">2023 营收 $32.5B，较 2022 的 $22.7B 增长 43% [[raw/articles/businessofapps_shein_2026#^p-53-b44b65]]
+</code></pre>
+<ul>
+<li><code>[[...]]</code> 是<strong>双链</strong>，指向另一份资料。</li>
+<li><code>#^p-53-b44b65</code> 是<strong>锚点</strong>——相当于贴在原文第 53 段上的一个永久"书签"。<code>^p</code> = 段落，<code>^h</code> = 标题段，<code>^t</code> = 表格。</li>
+<li>这些锚点是工具<strong>自动生成</strong>的（你不用手写），由 <code>^字母-序号-哈希</code> 三段组成，哈希保证内容变了能被检测出来。</li>
+</ul>
+<blockquote>
+<p>💡 <strong>为什么这么做？</strong> 这样任何人（或任何 agent）看到一句结论，都能一键跳到<strong>原文的那一段</strong>去核对，而不是"在整篇 PDF 里大海捞针"。这就是"完整页面优先 + 精确溯源"。</p>
+</blockquote>
+<h3 id="五种页面类型-一句话各是什么">五种页面类型，一句话各是什么<a class="headerlink" href="#五种页面类型-一句话各是什么" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>干什么用</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>source_summary</code> 来源摘要</td>
+<td>一份原始资料的结构化摘要（1 对 1）</td>
+<td>"Business of Apps SHEIN 统计报告"</td>
+</tr>
+<tr>
+<td><code>entity</code> 实体</td>
+<td>一个公司/产品/机构</td>
+<td>SHEIN、TikTok Shop</td>
+</tr>
+<tr>
+<td><code>concept</code> 概念</td>
+<td>一个术语/方法/制度</td>
+<td>"跨境支付"、"De Minimis 豁免"</td>
+</tr>
+<tr>
+<td><code>analysis</code> 分析</td>
+<td>跨多份资料的综合判断</td>
+<td>"De Minimis 终结对卖家的级联影响"</td>
+</tr>
+<tr>
+<td><code>index</code> 索引（MOC）</td>
+<td>一个主题的导航目录</td>
+<td>"物流/支付/履约 索引"</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-核心案例-喂一篇资料-看它如何变成知识">4. 核心案例：喂一篇资料，看它如何变成知识<a class="headerlink" href="#4-核心案例-喂一篇资料-看它如何变成知识" title="Permanent link">#</a></h2>
+<p>这是全教程最重要的一章。我们用一个<strong>真实案例</strong>，完整走一遍"从一份原始报告 → 变成可追溯的知识"的生命周期。</p>
+<blockquote>
+<p><strong>讲解案例</strong>：一篇 Business of Apps 网站的《Shein Revenue and Usage Statistics 2026》统计报告，它被摄入 <code>smb-ecommerce</code> 库后的<strong>成品</strong>（来源摘要页、被更新的 SHEIN 实体页、冲突标注）都在你克隆下来的 wiki 里，本章截图全部来自它——你可以在网页台里对照着看。</p>
+<p>✋ <strong>跟做提示（重要）</strong>：这篇 SHEIN 报告的<strong>原文不随仓库分发</strong>（版权原因，见 §2.3），所以下面的命令你<strong>不能</strong>对它原样跑。想亲手操作的话，仓库附带了一篇<strong>可自由分发的示例文章</strong>（<code>docs/examples/</code>，作者自写、CC0 协议），下文每个步骤都给出"跟做版"命令——或者直接换成你自己的任何一篇网页/PDF，效果相同。</p>
+</blockquote>
+<h3 id="步骤-1-把原始资料放进-raw">步骤 1️⃣：把原始资料放进 <code>raw/</code><a class="headerlink" href="#步骤-1-把原始资料放进-raw" title="Permanent link">#</a></h3>
+<p>原始资料（网页/PDF/Word 都行）统一放进当前 workspace 的 <code>raw/</code> 子目录。<strong>跟做版</strong>——把示例文章复制进去：</p>
+<pre><code class="language-bash">mkdir -p workspaces/smb-ecommerce/raw/articles
+cp docs/examples/sample_haiwaicang_vs_zhiyou.html workspaces/smb-ecommerce/raw/articles/
+</code></pre>
+<p>（讲解案例当年放入的位置是 <code>workspaces/smb-ecommerce/raw/articles/businessofapps_shein_2026.html</code>，同一个目录。如果你用自己的文章：浏览器打开网页按 ⌘S / Ctrl+S「另存为 HTML」，存进这个目录即可。）</p>
+<blockquote>
+<p>🔒 <strong>铁规矩</strong>：<code>raw/</code> 是<strong>原始真相、只读</strong>。agent 永远不许改 <code>raw/</code> 里的文件。而且 <code>raw/</code> 默认<strong>不进开源仓库</strong>（被 <code>.gitignore</code> 排除）——原始资料可能有版权，留在本地即可；公开的是你整理出的 wiki。</p>
+</blockquote>
+<h3 id="步骤-2-转成-markdown-自动加锚点">步骤 2️⃣：转成 markdown + 自动加锚点<a class="headerlink" href="#步骤-2-转成-markdown-自动加锚点" title="Permanent link">#</a></h3>
+<pre><code class="language-bash">python scripts/convert.py --dir workspaces/smb-ecommerce/raw/articles --ext .html
+</code></pre>
+<p>这一步做两件事：</p>
+<ol>
+<li>把 <code>.html</code>（或 PDF/Word）转成纯文本 <code>.md</code>；</li>
+<li><strong>自动给每一段、每个标题、每张表加上锚点</strong>（<code>^p-…</code>/<code>^h-…</code>/<code>^t-…</code>），并生成一份 <code>.outline.json</code> 大纲。</li>
+</ol>
+<p>看看大纲（agent 后面就靠它知道"这份资料有哪些段、各段的书签是什么"）：</p>
+<pre><code class="language-bash">python scripts/k.py outline raw/articles/sample_haiwaicang_vs_zhiyou.md
+</code></pre>
+<p>你应该看到类似这样的输出——每个标题、每段都有了自己的锚点：</p>
+<pre><code>文档: raw/articles/sample_haiwaicang_vs_zhiyou.md
+字符数: 1662 | 段数: 11
+
+# 海外仓与直邮：跨境电商小卖家的发货方案入门对比  [^h-1-1-01695e]
+  ## 一、两种发货方式是什么  [^h-2-1-4f49bd]
+  ## 二、关键维度对比  [^h-2-2-26a847]
+  ## 三、什么时候该从直邮切到海外仓  [^h-2-3-8c2c59]
+    ### 3.1 三个常见信号  [^h-3-1-6636ea]
+    ...
+</code></pre>
+<blockquote>
+<p>📐 <strong>两条命令的路径写法不一样，注意别混</strong>：
+- <code>convert.py</code> 的 <code>--dir</code> 用<strong>仓库根目录</strong>下的完整路径（带 <code>workspaces/smb-ecommerce/</code> 前缀）——因为它要明确知道你转的是哪个库的哪个目录；
+- <code>k.py</code> 的所有路径<strong>相对当前 workspace</strong>（<strong>不带</strong> <code>workspaces/</code> 前缀）——它通过 <code>--workspace</code> 参数（默认 <code>smb-ecommerce</code>）已经知道在哪个库里。
+万一带错了前缀也不要慌：<code>k.py</code> 会自动识别并剥掉、在提示里告诉你。</p>
+<p>⚠️ 另外，convert 生成的 <code>.md</code> 和 <code>.outline.json</code> 是<strong>派生产物</strong>（机器生成的），<strong>不要手改</strong>——下次 convert 会覆盖。源头永远是 <code>raw/</code> 里的原始文件。</p>
+</blockquote>
+<h3 id="步骤-3-让-ai-agent-登场-关键">步骤 3️⃣：让 AI agent 登场（关键！）<a class="headerlink" href="#步骤-3-让-ai-agent-登场-关键" title="Permanent link">#</a></h3>
+<p><strong>这一步是很多新手最容易误解的地方</strong>：知识库<strong>自己不会</strong>读资料、写 wiki。是<strong>你打开一个 AI 编程助手（如 Claude Code），让它来做</strong>。具体操作（以 Claude Code 为例）：</p>
+<ol>
+<li><strong>装好</strong>（§2.1 装过就跳过）：<code>npm install -g @anthropic-ai/claude-code</code>；</li>
+<li><strong>新开一个终端</strong>，<code>cd</code> 进 groundmap 仓库目录（必须在这个目录里启动，agent 才能读到行为规范）；</li>
+<li>输入 <code>claude</code> 回车——进入一个对话界面，光标停在输入框里；</li>
+<li><strong>把下面这句话粘贴进输入框</strong>，回车：</li>
+</ol>
+<blockquote>
+<p>"请把 <code>raw/articles/sample_haiwaicang_vs_zhiyou.md</code> 摄入到 <code>smb-ecommerce</code> 知识库。"</p>
+</blockquote>
+<p>也可以输入 <code>/kb-ingest</code> 触发同名<strong>技能</strong>——"技能（skill）"就是一份预先写好的工作流说明书（存在 <code>.claude/skills/</code> 目录），斜杠命令是它的快捷入口，效果和上面那句话相同。</p>
+<p>接下来 agent 会自己干活（你能在界面里看到它一步步执行）：</p>
+<ol>
+<li>先读项目根目录的 <strong><code>CLAUDE.md</code></strong>（行为规范）和 <strong><code>.claude/skills/kb-ingest</code></strong>（摄入工作流的详细步骤）；</li>
+<li>按规范读这份资料的原文（短文直接读全、长文按章节读）；</li>
+<li><strong>综合判断</strong>：这份资料的核心价值是什么？和库里已有的哪些页重叠？有没有和已有结论打架？</li>
+</ol>
+<blockquote>
+<p>💡 <strong>如果你不用 Claude Code 也行</strong>：这套规范对任何能读写文件的 AI agent（Cursor、Codex 等）都适用——<code>AGENTS.md</code> 是给它们的同款入口。知识库提供的是"工具 + 规范"，谁来当这个管理员都可以。</p>
+</blockquote>
+<h3 id="步骤-4-agent-产出一个-来源摘要页">步骤 4️⃣：agent 产出一个"来源摘要页"<a class="headerlink" href="#步骤-4-agent-产出一个-来源摘要页" title="Permanent link">#</a></h3>
+<p>agent 在 <code>wiki/sources/</code> 生成一页结构化摘要。下图是讲解案例（SHEIN 报告）的成品——你跟做产出的那页结构相同、内容对应你的文章：</p>
+<figure><img alt="ingest 产出的来源摘要页" src="images/tutorial/03-page-source.png" /><figcaption>agent 摄入后生成的来源摘要页：标准 Frontmatter（已审阅 / source_count 1）+ 结构化正文 + 块级引用。</figcaption></figure>
+<p>注意几个要点：</p>
+<ul>
+<li>右侧 Frontmatter：<code>type: source_summary</code>、<code>status: 已审阅</code>、<code>source_count: 1</code>、<code>sources</code> 指向那份 raw。</li>
+<li>正文每条数据都挂着块级引用 <code>[1][2]</code>（精确指向 raw 的某段，<strong>不允许编造</strong>；实在没出处就显式标 <code>[需要来源]</code>）。</li>
+<li>必有一节 <strong>「AI 综合判断」</strong>，下设三个小节：</li>
+<li><strong>核心价值</strong>：这份资料带来了什么新东西（如：SHEIN 2016–2023 逐年时间序列）；</li>
+<li><strong>关联</strong>：和库里哪些页有关；</li>
+<li><strong>冲突</strong>：有没有和已有结论矛盾。</li>
+</ul>
+<h3 id="步骤-5-连锁反应-更新核心页-标记待更新-归入索引">步骤 5️⃣：连锁反应——更新核心页、标记待更新、归入索引<a class="headerlink" href="#步骤-5-连锁反应-更新核心页-标记待更新-归入索引" title="Permanent link">#</a></h3>
+<p>agent 不止写一页，还会：</p>
+<ul>
+<li><strong>更新最核心的 2–3 个节点</strong>：比如往 SHEIN 实体页的「关键数据」表里补一行（带新出处）；</li>
+<li><strong>发现冲突就标注</strong>（本案例真的发生了！）：这份报告标题写"2026"，但数据其实截止到 <strong>2023</strong>。库里 SHEIN 实体页用的是 2024/2025 口径。agent <strong>不会直接覆盖</strong>，而是写一个冲突标注：「年份/版本差异，非真冲突；引用时须标注年份」——留待人类确认。</li>
+<li><strong>给暂时顾不上的次要页打 <code>#to-be-updated</code> 标签</strong>（"我知道这页也该更新，先记下"）；</li>
+<li><strong>自动归入 MOC</strong>（<strong>M</strong>ap <strong>o</strong>f <strong>C</strong>ontent，"内容地图"——就是 <code>type: index</code> 的主题索引页，相当于某个主题的目录）；</li>
+<li>在 <code>log.md</code> 记一笔，然后 <strong><code>git commit</code></strong> <strong>原子提交</strong>（"原子"= 这次 ingest 的所有改动作为一个不可拆的整体一次性提交，要么全有、要么全无，方便整体回滚）。</li>
+</ul>
+<h3 id="步骤-6-验收-确认知识真的-长-进库里了">步骤 6️⃣：验收——确认知识真的"长"进库里了<a class="headerlink" href="#步骤-6-验收-确认知识真的-长-进库里了" title="Permanent link">#</a></h3>
+<p>跟做到这里，花两分钟验证三件事，闭环才算完成：</p>
+<p><strong>① 溯源真的能溯</strong>。刷新网页台，左侧页面树「来源摘要」分组里找到你的新页面，点开正文里任意一个 <code>[1]</code> 上标——它应该精确跳到 raw 原文的对应段落。这就是"每句话可溯源"在你自己的资料上生效了。</p>
+<p><strong>② 新知识能被检索到</strong>。新终端里跑：</p>
+<pre><code class="language-bash">python scripts/k.py search &quot;海外仓&quot;
+python scripts/k.py backlinks wiki/sources/sample_haiwaicang_vs_zhiyou.md
+</code></pre>
+<p>第一条应该命中你的新页面；第二条能看到哪些页引用了它（至少有 MOC 索引页）。<code>backlinks</code> 后面的页面名以 agent 实际生成的为准——第一条 <code>search</code> 的结果里就能看到。</p>
+<p><strong>③ 知识能用来回答问题</strong>。回到 Claude Code 对话框，问一句：</p>
+<blockquote>
+<p>"根据知识库，小卖家什么时候该从直邮切换到海外仓？"</p>
+</blockquote>
+<p>agent 会钻取你刚建好的页面，给出<strong>带引用清单</strong>的回答（查询的完整工作方式见下一章）。</p>
+<h3 id="这一章的小结-raw-wiki-全流程">这一章的小结：raw → wiki 全流程<a class="headerlink" href="#这一章的小结-raw-wiki-全流程" title="Permanent link">#</a></h3>
+<pre><code>你放 raw 文件  ─▶  convert.py 转 md + 加锚点  ─▶  AI agent 读原文
+                                                      │
+                          ┌───────────────────────────┘
+                          ▼
+   写来源摘要页（带块级引用 + AI 综合判断）
+        │
+        ├─▶ 更新 2-3 个核心节点页（补数据 + 出处）
+        ├─▶ 发现矛盾 → 写&quot;冲突标注&quot;（不覆盖，待人类判别）
+        ├─▶ 次要页打 #to-be-updated
+        ├─▶ 自动归入主题索引 MOC
+        └─▶ 记 log.md + git commit
+</code></pre>
+<blockquote>
+<p>想看这套流程的<strong>互动演示</strong>？顶栏点「教学」（<code>/learn</code>），里面用《Attention Is All You Need》论文一步步演示了同样的 10 步。</p>
+</blockquote>
+<hr />
+<h2 id="5-知识库建好后-怎么用它">5. 知识库建好后，怎么用它<a class="headerlink" href="#5-知识库建好后-怎么用它" title="Permanent link">#</a></h2>
+<p>知识沉淀好了，下面是你日常会用到的四件事。</p>
+<h3 id="5-1-浏览与查询-像研究员一样钻取">5.1 浏览与查询：像研究员一样钻取<a class="headerlink" href="#5-1-浏览与查询-像研究员一样钻取" title="Permanent link">#</a></h3>
+<p>先回答新手最常问的一个问题：<strong>"我到底在哪里提问？"</strong></p>
+<blockquote>
+<p><strong>提问的对象是你的 AI agent（比如 Claude Code 的对话框），不是网页台。</strong> 网页台没有内置问答 AI（这是设计决定——系统本身不调用任何 LLM，见第 1 章的铁规矩）；它是用来<strong>浏览、审计、决议</strong>的界面。日常用法就是：终端里 <code>claude</code> 进入对话，直接问，例如——</p>
+<p>"根据知识库，2025 年小卖家做跨境出海最大的合规风险是什么？"</p>
+</blockquote>
+<ul>
+<li><strong>直接浏览</strong>（网页台）：左侧页面树点进去看；每页底部能顺着 <strong>入链/出链</strong>（backlinks/outlinks）"顺藤摸瓜"。</li>
+<li><strong>查询</strong>（问 agent）：知识库的查询不是"丢给 AI 一个问题等答案"，而是 agent <strong>像研究员一样分层钻取</strong>：先看根索引 → 进子索引 → 读具体页 → 跟着双链追相关页 → 综合作答，并<strong>附上引用清单</strong>。想看这个过程长什么样：顶栏「查询讲解」用 4 个真实跑过的查询逐步演示（「查询控制台」是可选子工具，见 §2.4 的说明）：</li>
+</ul>
+<figure><img alt="查询讲解页" src="images/tutorial/09-walkthrough.png" /><figcaption>「查询讲解」页：每个例子都展示 agent 从提问到答案的完整钻取路径（搜索 → 概念页 → 链接 → 分析页 → 作答）。</figcaption></figure>
+<p>命令行也能查：</p>
+<pre><code class="language-bash">python scripts/k.py search &quot;cross-border&quot;      # 全文关键词检索
+python scripts/k.py backlinks wiki/entities/shein.md   # 谁引用了这页
+</code></pre>
+<h3 id="5-2-知识图谱-一眼看清知识的关系网">5.2 知识图谱：一眼看清知识的关系网<a class="headerlink" href="#5-2-知识图谱-一眼看清知识的关系网" title="Permanent link">#</a></h3>
+<p>顶栏点「图谱」：</p>
+<figure><img alt="2D 知识图谱" src="images/tutorial/04-graph.png" /><figcaption>整个知识库的拓扑：节点 = 页面（按类型染色），边 = 引用关系（按关系类型染色）。</figcaption></figure>
+<p>怎么读这张图：</p>
+<ul>
+<li><strong>节点 = 一个 wiki 页</strong>，颜色按类型分（蓝=概念、绿=实体、黄=来源摘要、紫=分析……右上角有图例）。节点越大，说明被引用/引用别人越多（越"核心"）。</li>
+<li><strong>边 = 一条引用</strong>。默认灰色；如果引用时标了<strong>关系类型</strong>，边会染色：<code>SUPPORTS</code> 绿（支持）、<code>REFUTES</code> 红（反驳）、<code>EXTENDS</code> 蓝（延伸）……</li>
+<li><strong>鼠标悬停</strong>某节点 → 高亮它的关联边和邻居；<strong>点击</strong>节点 → 跳到那一页。</li>
+<li>右下角是小地图，左侧可按类型/标签过滤。</li>
+</ul>
+<blockquote>
+<p>这张 2D 图就是知识库的"星图"——哪些知识抱团、哪个概念是枢纽、哪两份资料在打架，一目了然。</p>
+</blockquote>
+<h3 id="5-3-健康度仪表板-知识库的-体检报告">5.3 健康度仪表板：知识库的"体检报告"<a class="headerlink" href="#5-3-健康度仪表板-知识库的-体检报告" title="Permanent link">#</a></h3>
+<p>顶栏点「健康度」：</p>
+<figure><img alt="健康度仪表板" src="images/tutorial/05-health.png" /><figcaption>每个数字都是一项体检指标。绿色=健康，红/黄=需要关注。</figcaption></figure>
+<p>主要指标怎么看：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>含义</th>
+<th>理想值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>总页面</strong></td>
+<td>知识库规模</td>
+<td>——</td>
+</tr>
+<tr>
+<td><strong>孤儿页面</strong></td>
+<td>没有任何入链的"断头页"</td>
+<td>0</td>
+</tr>
+<tr>
+<td><strong>未决冲突</strong></td>
+<td>等人类判别的矛盾标注</td>
+<td>少量（有时是好事，见下）</td>
+</tr>
+<tr>
+<td><strong>#to-be-updated 积压</strong></td>
+<td>被标记"待更新"还没处理的页</td>
+<td>越少越好</td>
+</tr>
+<tr>
+<td><strong>失效引用</strong></td>
+<td>指向已不存在锚点的断链</td>
+<td><strong>你自己资料的引用必须 0</strong>（克隆来的示例库因 raw 不随仓分发会显示 ~287 条"raw 文件不存在"，属预期，见 §2.3）</td>
+</tr>
+<tr>
+<td>低 confidence / Stale draft</td>
+<td>可信度低 / 30 天没动的草稿</td>
+<td>关注</td>
+</tr>
+</tbody>
+</table>
+<p>下半部分按<strong>类型 / 状态 / confidence</strong> 给出分布。</p>
+<h3 id="5-4-冲突工作台-新旧资料打架了怎么办">5.4 冲突工作台：新旧资料打架了怎么办<a class="headerlink" href="#5-4-冲突工作台-新旧资料打架了怎么办" title="Permanent link">#</a></h3>
+<p>知识库的一个核心理念：<strong>发现矛盾，绝不直接覆盖</strong>——而是标注成"冲突"，留住两种观点，交给人判别。顶栏「健康度」→「未决冲突」进入工作台：</p>
+<figure><img alt="冲突工作台" src="images/tutorial/06-conflicts.png" /><figcaption>三个未决冲突，每个都列出双方数据 + AI 判断 + 状态，下方是四个解决按钮。</figcaption></figure>
+<p>每个冲突给你<strong>四条解决路径</strong>（按钮）：</p>
+<ul>
+<li><strong>采纳新观点</strong>（adopt_new）：用新结论改写，旧观点降为历史注释；</li>
+<li><strong>并存多视角</strong>（merge）：两种视角都保留，加一段整合判断；</li>
+<li><strong>保留旧版</strong>（keep_old）：维持原状，标记已解决；</li>
+<li><strong>改为持续观察</strong>（keep_watching）：暂时无法定论，挂着继续观察。</li>
+</ul>
+<blockquote>
+<p>📌 <strong>图中这 3 个冲突是故意留着的好例子</strong>：它们都是"2024→2025 跨境电商增速腰斩，到底是贸易摩擦还是基数效应"——两种解释并存、要等 2026 上半年数据才能定论。所以它们被标成 <strong>👁 持续观察</strong>，正好示范了"知识是活的、会随新证据演化"。</p>
+</blockquote>
+<hr />
+<h2 id="6-日常维护-让知识库长期不腐烂">6. 日常维护：让知识库长期不腐烂<a class="headerlink" href="#6-日常维护-让知识库长期不腐烂" title="Permanent link">#</a></h2>
+<p>知识库会随时间"长草"（积压待更新、出现断链、冲突没人管）。每隔一阵做一次"周检"（lint）：</p>
+<pre><code class="language-bash">python scripts/k.py list-to-update        # 待更新积压
+python scripts/k.py list-orphans          # 孤儿页面
+python scripts/k.py list-conflicts        # 未决冲突
+python scripts/k.py list-broken-refs      # 失效引用（断锚）
+python scripts/k.py list-source-issues    # 溯源问题（声明了来源却没真引用等）
+python scripts/k.py health --json         # 一次性汇总所有指标
+</code></pre>
+<p>处理原则：</p>
+<ul>
+<li><strong>失效引用</strong> → 优先清零（用 <code>outline</code> 找到目标页现存锚点，重新指过去；实在没支撑就标 <code>[需要来源]</code>）。</li>
+<li><strong>#to-be-updated 积压</strong> → 逐个补全或确认无需更新后去标。</li>
+<li><strong>冲突</strong> → 在工作台逐条决议。</li>
+<li>想让 agent 自动跑整套周检：用 <code>/kb-lint</code> 技能。</li>
+</ul>
+<blockquote>
+<p>✅ <strong>判断维护到位的标准</strong>：<code>health</code> 里 <code>失效引用 / 孤儿 / 溯源问题</code> 全为 0（指<strong>你自己 ingest 的内容</strong>；克隆来的示例库那 ~287 条"raw 文件不存在"是 raw 不随仓分发的预期现象，不算你的维护债），冲突和待更新都是"知道且在管"的状态。</p>
+</blockquote>
+<hr />
+<h2 id="7-建你自己的知识库-从零开一个新主题">7. 建你自己的知识库：从零开一个新主题<a class="headerlink" href="#7-建你自己的知识库-从零开一个新主题" title="Permanent link">#</a></h2>
+<p>前面玩的都是自带的示例库。真正的价值在这里：<strong>给你自己关心的主题建一个库</strong>。整个过程 4 步，第一步只要一条命令。</p>
+<h3 id="7-1-一条命令生成骨架">7.1 一条命令生成骨架<a class="headerlink" href="#7-1-一条命令生成骨架" title="Permanent link">#</a></h3>
+<p>想好一个名字（小写字母/数字/连字符，比如研究 AI 的叫 <code>ai-research</code>，做美股投资笔记的叫 <code>us-stocks</code>），然后：</p>
+<pre><code class="language-bash">python scripts/k.py new-workspace ai-research
+</code></pre>
+<p>你会看到：</p>
+<pre><code>✅ 已创建 workspace 'ai-research': .../workspaces/ai-research
+
+下一步：
+  1. 把原始资料（HTML/PDF/Word/Markdown）放进 workspaces/ai-research/raw/articles/ 或 raw/papers/
+  2. python scripts/convert.py --workspace ai-research        # 转 markdown + 自动加锚点
+  3. 让 AI agent 执行摄入（如在 Claude Code 里说「把 raw/... 摄入到 ai-research 知识库」或用 /kb-ingest）
+  4. python scripts/k.py --workspace ai-research health       # 体检
+</code></pre>
+<p>这条命令生成了和示例库完全相同的目录结构：<code>wiki/</code>（含一个空的根索引）、<code>raw/articles/</code>、<code>raw/papers/</code>、<code>exports/</code>、<code>my_thoughts/</code>、<code>log.md</code>。</p>
+<h3 id="7-2-喂第一批资料">7.2 喂第一批资料<a class="headerlink" href="#7-2-喂第一批资料" title="Permanent link">#</a></h3>
+<p>把你手头的资料（论文 PDF、网页另存的 HTML、Word 文档、纯 markdown 都行）放进 <code>workspaces/ai-research/raw/</code> 的对应子目录，然后转换：</p>
+<pre><code class="language-bash">python scripts/convert.py --workspace ai-research
+</code></pre>
+<h3 id="7-3-让-agent-摄入">7.3 让 agent 摄入<a class="headerlink" href="#7-3-让-agent-摄入" title="Permanent link">#</a></h3>
+<p>Claude Code 对话框里（在仓库目录启动）：</p>
+<blockquote>
+<p>"请把 <code>raw/papers/</code> 下的新文件摄入到 <code>ai-research</code> 知识库。"</p>
+</blockquote>
+<p>资料多的话一篇一篇来，每篇都是第 4 章那套完整流程（摘要页 + 块级引用 + 综合判断 + MOC 归档 + git 提交）。</p>
+<h3 id="7-4-在网页台看你的库">7.4 在网页台看你的库<a class="headerlink" href="#7-4-在网页台看你的库" title="Permanent link">#</a></h3>
+<p>两种方式任选：</p>
+<ul>
+<li><strong>顶栏切换器</strong>：网页台顶栏右侧的 workspace 下拉，直接选 <code>ai-research</code>，无需重启；</li>
+<li><strong>指定启动</strong>：<code>cd web &amp;&amp; KB_WORKSPACE=ai-research npm run dev</code>。</li>
+</ul>
+<figure><img alt="workspace 切换器位置" src="images/tutorial/08-workspace-switcher.png" /><figcaption>workspace 切换器就在顶栏右侧（图中 <code>smb-ecommerce</code> 下拉框）——你的新库建好后会自动出现在选项里。</figcaption></figure>
+<p>命令行同理，所有 <code>k.py</code> 命令加 <code>--workspace ai-research</code> 即可。</p>
+<blockquote>
+<p>📌 从这里开始，第 5 章（查询/图谱/健康度/冲突）和第 6 章（维护）的一切都适用于你的新库。你自己 ingest 的内容 raw 原文就在本地，所以 <code>health</code> 的失效引用应该保持 <strong>0</strong>——这才是你真正要盯的健康线。</p>
+</blockquote>
+<hr />
+<h2 id="8-进阶-按需">8. 进阶（按需）<a class="headerlink" href="#8-进阶-按需" title="Permanent link">#</a></h2>
+<ul>
+<li><strong>多主题库</strong>：一套引擎服务多个主题，数据隔离在 <code>workspaces/&lt;名字&gt;/</code>（第 7 章已经体验过了）。命令行 <code>--workspace &lt;名字&gt;</code>，网页台 <code>KB_WORKSPACE=&lt;名字&gt;</code>。</li>
+<li><strong>跨独立项目复用引擎</strong>：用环境变量 <code>KB_ROOT</code> 把引擎指向某个项目自己的数据根，引擎装一份、所有项目共享。<code>KB_ROOT</code> 选"哪个项目"，<code>--workspace</code> 选"项目内哪个库"。</li>
+<li><strong>给图谱加语义</strong>：引用时写关系类型，图谱里的边就会染色并带语义——
+  <code>markdown
+  该方法已被多个团队复现 [[wiki/concepts/foo|SUPPORTS]]。
+  但在多语言场景下被反驳 [[wiki/sources/bar|REFUTES]]。</code>
+  标准关系白名单 7 个：<code>SUPPORTS</code> / <code>REFUTES</code> / <code>EXTENDS</code> / <code>IS_A</code> / <code>PART_OF</code> / <code>ALTERNATIVE_TO</code> / <code>CITES</code>。</li>
+<li><strong>网页版互动教程</strong>：顶栏「教学」（<code>/learn</code>）用真实论文一步步演示 ingest 全流程：</li>
+</ul>
+<figure><img alt="内置互动教程" src="images/tutorial/07-learn.png" /><figcaption><code>/learn</code>：可在浏览器里点着学的 10 步互动演示。</figcaption></figure>
+<hr />
+<h2 id="9-常见问题排错">9. 常见问题排错<a class="headerlink" href="#9-常见问题排错" title="Permanent link">#</a></h2>
+<p><strong>新手最常踩的几个坑</strong>（按出现频率排序）：</p>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>解决</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>can't open file 'scripts/k.py': No such file or directory</code></td>
+<td>你不在仓库根目录。先 <code>cd</code> 进 groundmap 目录再跑命令（尤其是新开的终端窗口，默认在家目录）</td>
+</tr>
+<tr>
+<td><code>python: command not found</code></td>
+<td>把命令里的 <code>python</code> 换成 <code>python3</code>（见 §2.1 小贴士）</td>
+</tr>
+<tr>
+<td>刚装好一跑 <code>health</code> 就有 287 条失效引用</td>
+<td><strong>预期现象</strong>，不是装坏了——示例库的 raw 原文不随仓库分发（§2.3 有详细解释）。看 <code>total_pages: 56</code> 在不在</td>
+</tr>
+<tr>
+<td>网页突然打不开了</td>
+<td>你可能在跑着 <code>make web</code> 的终端里按了 Ctrl+C 或关了窗口。重新 <code>make web</code> 即可；那个窗口要一直留着</td>
+</tr>
+<tr>
+<td><code>k.py</code> 报"文件不存在"，路径却看着没错</td>
+<td>检查是不是带了 <code>workspaces/xxx/</code> 前缀——<code>k.py</code> 的路径相对当前 workspace、不带该前缀（带了它也会自动剥掉并提示，见 §4 步骤 2）；跨库要用 <code>--workspace 那个库名</code></td>
+</tr>
+<tr>
+<td>点顶栏「查询控制台」连接失败</td>
+<td>它是可选的独立子工具（3100 端口），默认不启动，新手可忽略（见 §2.4）</td>
+</tr>
+<tr>
+<td><code>ModuleNotFoundError</code>（如 <code>python-frontmatter</code> 缺失）</td>
+<td><code>python -m pip install -r requirements-dev.txt</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>其他情况</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>解决</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>网页台报找不到依赖</td>
+<td><code>cd web &amp;&amp; npm install</code></td>
+</tr>
+<tr>
+<td>端口 3006 被占用</td>
+<td><code>cd web &amp;&amp; npm run dev -- -p 3010</code>（换端口）</td>
+</tr>
+<tr>
+<td><code>npm run build</code> 后页面 404</td>
+<td>dev 服务和 build 共用 <code>web/.next/</code>；build 前先停掉 dev 服务</td>
+</tr>
+<tr>
+<td>改了 <code>raw/**.md</code> 下次没了</td>
+<td>那是派生产物，会被 convert 覆盖；只改 <code>raw/</code> 里的<strong>原始</strong>文件</td>
+</tr>
+<tr>
+<td>想写 <code>raw/</code> 或 <code>my_thoughts/</code> 被拒</td>
+<td>这是<strong>设计如此</strong>的硬约束：这些区域对 agent 只读，工具会直接拒绝</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-附录-一图看懂整个工作流">10. 附录：一图看懂整个工作流<a class="headerlink" href="#10-附录-一图看懂整个工作流" title="Permanent link">#</a></h2>
+<pre><code>┌──────────────────────────── 搭建 ────────────────────────────┐
+│                                                              │
+│  ① 放原始资料         ② 转换 + 加锚点         ③ AI agent 摄入    │
+│  raw/articles/   ─▶   convert.py        ─▶   读 CLAUDE.md +    │
+│  （只读·不进仓）        （.md + .outline.json）   kb-ingest，读原文 │
+│                                                   │           │
+│                          ┌────────────────────────┘           │
+│                          ▼                                     │
+│  ④ 写 wiki：来源摘要页（块级引用 + AI 综合判断）                    │
+│       ├─ 更新核心节点页（补数据 + 出处）                          │
+│       ├─ 矛盾 → 冲突标注（不覆盖）                               │
+│       ├─ 次要页打 #to-be-updated                              │
+│       ├─ 归入主题索引 MOC                                      │
+│       └─ log.md + git commit（原子提交）                       │
+│                                                              │
+└──────────────────────────── 使用 ────────────────────────────┘
+│                                                              │
+│  浏览/查询（分层钻取 + 溯源）   图谱（关系网）   健康度（体检）       │
+│           │                      │              │             │
+│           └──── 发现冲突 ─▶ 冲突工作台 ─▶ 人类四选一决议 ──────┘     │
+│                                                              │
+│  ⟳ 周期性 lint 周检：清断链 / 消积压 / 决冲突 → 健康度归绿          │
+└──────────────────────────────────────────────────────────────┘
+
+贯穿始终：markdown + Git 是唯一真相 · 系统不调 LLM/不用 embedding · 每句话可溯源
+</code></pre>
+<hr />
+<p><strong>看到这里，你已经完整理解了 GroundMap：它怎么从一堆原始资料、经过 AI 管理员之手、长成一座每句话都能溯源的知识图书馆，以及建好之后怎么查、怎么看、怎么维护。</strong></p>
+<p>下一步建议：跟着第 2 章把它跑起来，打开顶栏「教学」点完那 10 步互动演示，再用第 4 章的示例文章亲手完成一次摄入；玩熟之后，按第 7 章 <code>new-workspace</code> 一条命令开一个<strong>你自己主题</strong>的库——你的知识资产从那一刻开始积累。</p>
+  </main>
+</div>
+<script>
+// 给 callout 引用框按首个 emoji 上色
+(function(){
+  var map={'📌':'info','💡':'tip','ℹ':'info','⚠':'warn','✅':'tip','🔴':'danger','🔒':'note','🎓':'info','🟠':'warn'};
+  document.querySelectorAll('.content blockquote').forEach(function(bq){
+    var t=(bq.textContent||'').trim();
+    for(var k in map){ if(t.indexOf(k)===0){ bq.classList.add(map[k]); break; } }
+  });
+})();
+// 侧栏目录：滚动高亮当前章节
+(function(){
+  var links=Array.prototype.slice.call(document.querySelectorAll('.sidebar nav a'));
+  var byId={}; links.forEach(function(a){ var id=decodeURIComponent((a.getAttribute('href')||'').replace(/^#/,'')); if(id) byId[id]=a; });
+  var heads=Array.prototype.slice.call(document.querySelectorAll('.content h2[id], .content h3[id]'));
+  if(!('IntersectionObserver' in window) || !heads.length) return;
+  var visible=new Set();
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting) visible.add(e.target); else visible.delete(e.target); });
+    var top=heads.filter(function(h){return visible.has(h);})[0] || null;
+    if(!top){ // 取最靠近视口顶部上方的标题
+      for(var i=heads.length-1;i>=0;i--){ if(heads[i].getBoundingClientRect().top<120){ top=heads[i]; break; } }
+    }
+    links.forEach(function(a){a.classList.remove('active');});
+    if(top && byId[top.id]) byId[top.id].classList.add('active');
+  },{rootMargin:'-10% 0px -75% 0px',threshold:0});
+  heads.forEach(function(h){obs.observe(h);});
+})();
+// 移动端抽屉
+(function(){
+  var sb=document.getElementById('sidebar'),mt=document.getElementById('menuToggle'),sc=document.getElementById('scrim');
+  function toggle(open){ sb.classList.toggle('open',open); sc.classList.toggle('show',open); }
+  if(mt) mt.addEventListener('click',function(){toggle(!sb.classList.contains('open'));});
+  if(sc) sc.addEventListener('click',function(){toggle(false);});
+  document.querySelectorAll('.sidebar nav a').forEach(function(a){a.addEventListener('click',function(){toggle(false);});});
+})();
+</script>
+</body>
+</html>

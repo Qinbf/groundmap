@@ -1,0 +1,89 @@
+# 私人数据默认不进开源仓库（与 CLAUDE.md「my_thoughts/raw 默认不进开源仓库」一致）。
+# 注意：.gitignore 只阻止「未来」提交，不会移除「历史」里已提交的旧顶层 raw/wiki/my_thoughts——
+# 历史清理是人工步骤（git filter-repo / BFG），见 docs/release-checklist.md。
+#
+# 多 workspace 数据层（按主题隔离）
+workspaces/*/raw/
+workspaces/*/my_thoughts/
+workspaces/*/.cache/
+workspaces/*/exports/
+#
+# 旧的扁平顶层布局（workspace 迁移前遗留；新结构不再使用，但防止误提交）
+/raw/
+/my_thoughts/
+/exports/
+#
+# 作者私人/非公开文档（商业策略、个人语境讨论等——绝不进开源仓）
+/开源策略讨论.md
+/开源策略*.md
+#
+# 杂物：根级 Node 工程（pptxgenjs/sharp 等，与 GroundMap 引擎无关，疑为其他任务遗留）——不进开源仓
+# 引擎的前端工程在 web/，本根级 package.json 非项目组成部分
+/package.json
+/package-lock.json
+
+# 派生索引（可从 markdown 全量重建）
+.cache/
+
+# wiki 大纲缓存（派生层：k.py 按 doc_chars 判新鲜、过期即现场重建——不入库。
+# raw/ 下的 outline.json 已随上方 raw 规则整体排除，这里只需覆盖 wiki）
+workspaces/*/wiki/**/*.outline.json
+/wiki/**/*.outline.json
+
+# 本地烟测临时目录
+.tmp/
+
+# Claude Code 源码副本（仅供架构借鉴参考，不属于知识库本身）
+claude_code源码/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.tsbuildinfo
+
+# Web 前端 / Node（通用 + web 专项）
+node_modules/
+.next/
+web/.next/
+web/node_modules/
+web/out/
+web/.turbo/
+
+# 调试控制台（独立子项目；详见 tools/debug-console/）
+tools/debug-console/.next/
+tools/debug-console/node_modules/
+tools/debug-console/out/
+
+# 敏感文件 — 防 token / private key 误 commit（项目当前不依赖任何 .env，
+# 但 Next.js 默认会加载 .env*；列在这里作为预防）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Playwright CLI 临时快照（人工 UI 巡检产出，非源码）
+.playwright-cli/
+
+# 大文件请使用 Git LFS
+# raw/assets/*.pdf
