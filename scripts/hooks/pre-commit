@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+#
+# 知识库 Git pre-commit hook
+# ----------------------------
+# 拒绝任何对 raw/ 或 my_thoughts/ 的修改进入 commit。
+# 这是写权限保护的第二层兜底（第一层是 agent 运行时权限与 CLAUDE.md/AGENTS.md 规范）。
+#
+# 拦截规则（与 CLAUDE.md「权限规则」/ ingest 第 12 步一致）：
+#   - raw/** 全部拦截——含 convert.py 派生的 .md / .outline.json。raw 及其派生物
+#     默认不入库（版权与隐私原因），正常流程它们已被 .gitignore 排除，本 hook
+#     兜底 `git add -f` 强制绕过的情形。
+#   - my_thoughts/**：全部拦截（人类专属区）。
+#   - 同时覆盖两种布局：旧顶层 raw|my_thoughts/ 与现行 workspaces/<name>/raw|my_thoughts/。
+#
+# 例外：人类如确需提交受保护路径，用 `git commit --no-verify` 显式跳过本 hook
+# （pre-commit 阶段拿不到本次 commit message，无法按 "human:" 前缀豁免——
+#   读 .git/COMMIT_EDITMSG 拿到的是**上一次** commit 的残留，按它放行反而是漏洞）。
+#
+# 安装：bash scripts/install_hooks.sh
+
+set -e
+
+# 从 GIT_INDEX 拿到将要提交的文件列表，选出受保护路径下的所有改动。
+# -c core.quotepath=false：默认 quotepath 会把非 ASCII 文件名转义成 "\345..." 带引号形式，
+# 行首引号使 ^ 锚定正则失配——中文知识库的常见文件名会直接穿透保护。
+forbidden=$(
+    git -c core.quotepath=false diff --cached --name-only \
+        | grep -E '^(raw|my_thoughts)/|^workspaces/[^/]+/(raw|my_thoughts)/' \
+        || true
+)
+
+if [ -z "$forbidden" ]; then
+    exit 0
+fi
+
+# 拦截
+echo ""
+echo "❌ 拒绝提交：以下文件位于只读区，不允许通过 agent commit："
+echo ""
+echo "$forbidden" | sed 's/^/   /'
+echo ""
+echo "原因：raw/ 是不可变的事实来源、默认不入库（版权与隐私，含 convert 派生物）；"
+echo "      my_thoughts/ 是人类专属区。两者均由 .gitignore 排除，本 hook 兜底 git add -f。"
+echo ""
+echo "如确需提交（仅限人类亲自操作）：用 --no-verify 显式跳过本 hook，"
+echo "并按惯例以 'human:' 开头写明缘由。"
+echo "  例：git commit --no-verify -m \"human: 手动修订核心原则页面\""
+echo ""
+
+exit 1

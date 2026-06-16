@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  test:
+    name: Test, lint, and build
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Docs promise Python 3.10+; test the whole supported range.
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run Python tests
+        run: python -m pytest scripts/tests
+
+      - name: Run knowledge base health check (default workspace must be non-empty)
+        # A fresh clone with no wiki pages (total_pages == 0) is a regression:
+        # it usually means the default workspace data was lost or gitignored away.
+        # Fail loudly so CI catches a "clone is empty" situation.
+        run: |
+          python scripts/k.py health --json | tee health.json
+          python - <<'PY'
+          import json
+          with open("health.json") as f:
+              data = json.load(f)
+          total = data.get("total_pages", 0)
+          assert total > 0, f"health reports total_pages={total}; default workspace appears empty"
+          print(f"OK: total_pages={total}")
+          PY
+
+  web:
+    name: Web lint and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Lint Web console
+        working-directory: web
+        run: npm run lint
+
+      - name: Build Web console
+        working-directory: web
+        run: npm run build

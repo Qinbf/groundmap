@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a reproducible problem in GroundMap.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve GroundMap. Please include enough detail for someone else to reproduce the issue.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Paste the release version or commit SHA.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI/scripts
+        - Web console
+        - Markdown schema
+        - Agent workflow
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: What command or UI action triggered the problem?
+      placeholder: |
+        1. Run ...
+        2. Open ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include relevant logs or screenshots.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        OS:
+        Python:
+        Node.js:
+        npm:
+    validations:
+      required: false

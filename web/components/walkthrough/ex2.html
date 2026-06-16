@@ -1,0 +1,201 @@
+
+<div class="question-banner">
+  <span class="q-label">Q2 · 含数据冲突</span>
+  <p class="q-text">TikTok Shop 美国 2025 GMV 到底是多少？</p>
+  <div class="q-meta">查询特征：单点事实问 · 但实际涉及两个第三方口径分歧 · 这正是设计要展示"冲突可见"的场景</div>
+</div>
+
+<div class="graph-section">
+  <h3>Agent 页面遍历图</h3>
+  <svg class="graph-svg" viewBox="0 0 1040 180" xmlns="http://www.w3.org/2000/svg">
+    <g font-family="-apple-system" font-size="11">
+      <circle cx="60" cy="90" r="22" fill="#fff" stroke="#a3a3a3" stroke-width="2"/>
+      <text x="60" y="94" text-anchor="middle" fill="#6b7280" font-weight="600">USER</text>
+      <circle cx="200" cy="90" r="26" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+      <text x="200" y="86" text-anchor="middle" fill="#1e40af" font-weight="700">SEARCH</text>
+      <text x="200" y="100" text-anchor="middle" fill="#1e40af" font-size="9">BM25 · 6 hits</text>
+      <circle cx="380" cy="60" r="30" fill="#dbeafe" stroke="#1e40af" stroke-width="2.5"/>
+      <text x="380" y="55" text-anchor="middle" fill="#1e40af" font-weight="700">entity</text>
+      <text x="380" y="68" text-anchor="middle" fill="#1e40af" font-size="9">tiktok_shop</text>
+      <text x="380" y="78" text-anchor="middle" fill="#1e40af" font-size="9">看到 2 个数字</text>
+      <circle cx="560" cy="90" r="26" fill="#fef3c7" stroke="#d97706" stroke-width="2.5"/>
+      <text x="560" y="86" text-anchor="middle" fill="#92400e" font-weight="700">CONFLICT</text>
+      <text x="560" y="100" text-anchor="middle" fill="#92400e" font-size="9">$14B vs $15.82B</text>
+      <circle cx="740" cy="60" r="32" fill="#ffe4e6" stroke="#be123c" stroke-width="2.5"/>
+      <text x="740" y="55" text-anchor="middle" fill="#be123c" font-weight="700">analysis</text>
+      <text x="740" y="68" text-anchor="middle" fill="#be123c" font-size="9">tiktok_shop_us</text>
+      <text x="740" y="78" text-anchor="middle" fill="#be123c" font-size="9">_market_size_2025</text>
+      <circle cx="940" cy="90" r="26" fill="#fef3c7" stroke="#b45309" stroke-width="2.5"/>
+      <text x="940" y="86" text-anchor="middle" fill="#92400e" font-weight="700">ANSWER</text>
+      <text x="940" y="100" text-anchor="middle" fill="#92400e" font-size="9">2 个口径都给</text>
+    </g>
+    <defs>
+      <marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6" fill="#6b7280"/>
+      </marker>
+    </defs>
+    <g stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#ar2)">
+      <line x1="82" y1="90" x2="172" y2="90"/>
+      <line x1="226" y1="90" x2="350" y2="65"/>
+      <line x1="410" y1="65" x2="535" y2="86"/>
+      <line x1="586" y1="86" x2="708" y2="64"/>
+      <line x1="772" y1="64" x2="912" y2="86"/>
+    </g>
+  </svg>
+</div>
+
+<div class="workflow">
+  <div class="step" data-type="intent">
+    <div class="step-header"><span class="step-num">01</span><span class="step-badge">INTENT</span><span class="step-title">解析查询</span></div>
+    <div class="step-body">
+      <div class="extract-box">
+        <span class="label">查询特征</span>
+        <ul>
+          <li>实体：<strong>TikTok Shop</strong>（专有名词）</li>
+          <li>指标：<strong>GMV</strong>（成交总额）</li>
+          <li>时间：<strong>2025 美国</strong>（年份 + 地区）</li>
+          <li>期望粒度：<em>具体数字</em></li>
+        </ul>
+      </div>
+      <div class="thinking">看起来是"单点事实查询"——但 TikTok 母公司不公开 GMV 自报，行业靠第三方估算。所以高概率会遇到口径分歧。</div>
+    </div>
+  </div>
+
+  <div class="step" data-type="search">
+    <div class="step-header"><span class="step-num">02</span><span class="step-badge">SEARCH</span><span class="step-title">BM25 搜索</span></div>
+    <div class="step-body">
+      <div><span class="label">工具调用</span><pre class="tool"><span class="k">k.py</span> search <span class="s">"tiktok shop gmv 2025"</span> --json</pre></div>
+      <div><span class="label">真实返回（top 6）</span>
+        <table class="response-table">
+          <tr><td class="score">73</td><td class="type source_summary">source_summary</td><td class="path">wiki/sources/modern_retail_tiktok_smb_66.md</td></tr>
+          <tr><td class="score">69</td><td class="type source_summary">source_summary</td><td class="path">wiki/sources/emarketer_tiktok_social_commerce.md</td></tr>
+          <tr><td class="score">53</td><td class="type analysis">analysis</td><td class="path">wiki/analyses/tiktok_shop_us_market_size_2025.md</td></tr>
+          <tr class="picked"><td class="score">45</td><td class="type entity">entity</td><td class="path">wiki/entities/tiktok_shop.md</td></tr>
+          <tr><td class="score">37</td><td class="type source_summary">source_summary</td><td class="path">wiki/sources/capitalone_tiktok_stats_2025.md</td></tr>
+          <tr><td class="score">25</td><td class="type source_summary">source_summary</td><td class="path">wiki/sources/mofcom_digital_trade_2025.md</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-type="eval">
+    <div class="step-header"><span class="step-num">03</span><span class="step-badge">EVAL</span><span class="step-title">按 type 优先级选 entity</span></div>
+    <div class="step-body">
+      <div class="thinking">问的是"TikTok Shop 美国 GMV"——这是对一个实体的属性问询。设计上 entity 页就是为这种问题准备的"实体属性聚合"。<br/>(虽然 entity 评分只 45，但 type 匹配度最高。)</div>
+    </div>
+  </div>
+
+  <div class="step" data-type="read">
+    <div class="step-header"><span class="step-num">04</span><span class="step-badge">READ</span><span class="step-title">读 entity 页</span></div>
+    <div class="step-body">
+      <div><span class="label">工具调用</span><pre class="tool"><span class="k">read_page</span>(<span class="s">"wiki/entities/tiktok_shop"</span>)</pre></div>
+      <div><span class="label">读到「关键数据」表 — 立刻看到两个 GMV 数字</span>
+        <pre class="frontmatter"><span class="key">| 维度</span>                     | <span class="key">数值</span>           | <span class="key">来源</span>
+| --- | --- | --- |
+| 2024 GMV YoY              | +407%          | Emarketer
+<span class="val green">| 2025 GMV（Emarketer）       | $15.82B (+108%)| Emarketer ★</span>
+<span class="val green">| 2025 GMV（Charm.io）        | ~$14B          | Modern Retail ★</span>
+| 2026 预测                 | $20B+          | Emarketer
+| 占社交电商份额（2025）     | 18.2%          | Emarketer
+| 美国 SMB 卖家数           | 215,000 (+25%) | Modern Retail
+| 美国 SMB GMV YoY          | +66%           | Modern Retail</pre></div>
+    </div>
+  </div>
+
+  <div class="step" data-type="conflict">
+    <div class="step-header"><span class="step-num">05</span><span class="step-badge">CONFLICT</span><span class="step-title">识别冲突 — 两个第三方口径</span></div>
+    <div class="step-body">
+      <div class="thinking">表格直接放了两行：Emarketer $15.82B vs Charm.io ~$14B——这<strong>不是 bug，是设计</strong>。entity 页就该显式展示分歧而不是挑一个。</div>
+      <div class="conflict-warn">
+        <span class="label">⚠️ 数据冲突信号</span>
+        差异 ~$1.82B（约 13%）。两个都是第三方估算，TikTok 不公开自报。要给用户负责任的回答，必须读分析页拿到方法学差异。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-type="link">
+    <div class="step-header"><span class="step-num">06</span><span class="step-badge">LINK</span><span class="step-title">导航到 analysis 页（entity 页结尾的指针）</span></div>
+    <div class="step-body">
+      <div class="thinking">entity 页结尾「关联」节直接列出 <span class="citation">[[wiki/analyses/tiktok_shop_us_market_size_2025]]</span>——设计上"含冲突的字段必有 analysis 页消化"。这是设计兑现的契约。</div>
+    </div>
+  </div>
+
+  <div class="step" data-type="read">
+    <div class="step-header"><span class="step-num">07</span><span class="step-badge">READ</span><span class="step-title">读 conflict-analysis 页</span></div>
+    <div class="step-body">
+      <div><span class="label">工具调用</span><pre class="tool"><span class="k">read_page</span>(<span class="s">"wiki/analyses/tiktok_shop_us_market_size_2025"</span>)</pre></div>
+      <div><span class="label">页面骨架</span>
+        <pre class="frontmatter"><span class="key">## 冲突陈述</span>     <span class="c"># [!WARNING] 块 — 完整冲突格式</span>
+<span class="key">## 方法学差异</span>
+<span class="key">## 对 SMB 卖家的决策启示</span>
+<span class="key">## 长期展望</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-type="extract">
+    <div class="step-header"><span class="step-num">08</span><span class="step-badge">EXTRACT</span><span class="step-title">读到真实冲突块</span></div>
+    <div class="step-body">
+      <div class="conflict-warn">
+        <span class="label">⚠️ 知识更新冲突 — 第三方估算口径冲突 — 2026-05-20</span>
+        <p style="margin:4px 0"><strong>来源 A：Emarketer 2025-12-09 预测</strong></p>
+        <ul style="margin:4px 0">
+          <li>2025 美国 GMV = <strong>$15.82B</strong>（+108% YoY） <span class="citation">[[raw/articles/emarketer_tiktok_social_commerce#^p-136-394777]]</span></li>
+          <li>占社交电商 18.2%，2027 升至 24.1%</li>
+        </ul>
+        <p style="margin:4px 0"><strong>来源 B：Charm.io 估算（Modern Retail 引用）</strong></p>
+        <ul style="margin:4px 0">
+          <li>2025 美国 GMV = <strong>~$14B</strong> <span class="citation">[[raw/articles/modern_retail_tiktok_smb_66#^p-40-2ff788]]</span></li>
+          <li>"TikTok itself does not publicly disclose sales figures"</li>
+        </ul>
+        <p style="margin:8px 0"><strong>差异</strong>：$1.82B（~13%）<br/><strong>状态</strong>：⏳ 待人类判别</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-type="extract">
+    <div class="step-header"><span class="step-num">09</span><span class="step-badge">EXTRACT</span><span class="step-title">提取方法学差异说明</span></div>
+    <div class="step-body">
+      <div class="extract-box">
+        <ul>
+          <li><strong>Charm.io</strong>：电商分析公司，<em>爬取 + 估算</em>单平台 GMV</li>
+          <li><strong>Emarketer</strong>：综合预测公司，<em>"公开公司 / 政府 / 媒体数据 + 高管访谈"</em></li>
+          <li>可能差异源：Emarketer 把直播打赏 / 礼物算入 GMV；Charm.io 仅算实体商品；不同时间窗起点</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-type="decide">
+    <div class="step-header"><span class="step-num">10</span><span class="step-badge">DECIDE</span><span class="step-title">够了，不挑边</span></div>
+    <div class="step-body">
+      <div class="thinking">两个第三方都不是官方自报。挑任何一边都是替用户做了主观判断。正确做法：<strong>把两个数字都摆出来 + 给出"对 SMB 决策无差异"的判断</strong>。这正是分析页的「对 SMB 卖家的决策启示」节已经做的——直接抄就好。</div>
+    </div>
+  </div>
+
+  <div class="step" data-type="answer">
+    <div class="step-header"><span class="step-num">11</span><span class="step-badge">ANSWER</span><span class="step-title">把冲突诚实摆出来</span></div>
+    <div class="step-body">
+      <div class="answer-panel">
+        <h3>Agent 最终回复</h3>
+        <p>TikTok 母公司<strong>不公开</strong>美国 GMV，行业靠两个第三方估算：</p>
+        <ul>
+          <li>Emarketer 2025-12-09 预测：<strong>$15.82B</strong>（+108% YoY，占社交电商 18.2%） <span class="citation">[[raw/articles/emarketer_tiktok_social_commerce#^p-136-394777]]</span></li>
+          <li>Charm.io 估算（Modern Retail 引用）：<strong>~$14B</strong> <span class="citation">[[raw/articles/modern_retail_tiktok_smb_66#^p-40-2ff788]]</span></li>
+        </ul>
+        <p><strong>差异约 13%</strong>。两个口径都不精确，但<strong>对 SMB 卖家决策无显著影响</strong>——不论 $14B 还是 $16B，平台都是 SMB 必争之地：215K 活跃 SMB（+25% YoY）、SMB GMV YoY +66%。</p>
+        <p>方法学差异详见 <span class="citation">[[wiki/analyses/tiktok_shop_us_market_size_2025]]</span>。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="rag-compare">
+  <span class="label">⚠️ 传统 chunk-RAG 会怎样</span>
+  <p>1. embedding 召回会把"$15.82B"和"$14B"两个 chunk 都拿到 — 但**没有结构告诉 LLM 这是冲突，不是补充信息**</p>
+  <p>2. LLM 综合时倾向"看起来更权威"的来源（Emarketer，因为有"forecast"措辞）— 把另一个数字 silenced</p>
+  <p>3. 用户看到的是"$15.82B"这个单一数字，<strong>不知道行业其实分歧</strong></p>
+  <p>4. 一旦用户用这个数字做投资估值或合同，<strong>风险落到用户头上</strong></p>
+</div>
+
+</div>
