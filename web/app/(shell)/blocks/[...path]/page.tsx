@@ -37,13 +37,13 @@ export default async function BlocksPage({ params }: BlocksPageProps) {
   const result = await runKCli<BlocksData>(["blocks", relPath]);
   if (!result.ok || !result.data) {
     return (
-      <main className="flex-1 overflow-y-auto px-10 py-6">
+      <main data-kb-scroll-main className="flex-1 overflow-y-auto px-10 py-6">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-2xl font-bold mb-2">{t("blocks.title", locale)}</h1>
           <p className="text-sm text-muted-foreground">{relPath}</p>
           <Separator className="my-4" />
           <p className="text-sm text-destructive">
-            {t("blocks.cli_error", locale, { err: result.error || "unknown" })}
+            {t("blocks.cli_error", locale, { err: result.error || t("common.unknown_error", locale) })}
           </p>
         </div>
       </main>
@@ -54,7 +54,7 @@ export default async function BlocksPage({ params }: BlocksPageProps) {
   const orderedKinds = KIND_ORDER.filter((k) => data.by_kind[k]);
 
   return (
-    <main className="flex-1 overflow-y-auto px-10 py-6">
+    <main data-kb-scroll-main className="flex-1 overflow-y-auto px-10 py-6">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-start justify-between mb-2">
           <div className="min-w-0">

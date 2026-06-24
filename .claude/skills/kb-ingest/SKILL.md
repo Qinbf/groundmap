@@ -142,6 +142,27 @@ python scripts/k.py read-section <wiki/concepts/foo.md> h-1-1-<anchor>
 
 通常组合：新建 1 个摘要页 + 更新 2-3 个核心概念页 + 标记 5-10 个次要页。
 
+### 节点类型速查：source_summary / concept / entity 怎么选
+
+三者都是 wiki 页、共享同一套 frontmatter，所以容易混；但它们处在知识流的**不同层**，先按层切再细分：
+
+- **source_summary（来源层）**：一篇 raw = 一页，`source_count` **恰好 1**，`sources:` 指向 `[[raw/...]]`。忠实复述「这一篇说了什么」，不做跨来源综合——第 5 步的产物就是它。
+- **concept / entity（知识节点层）**：跨多篇来源沉淀、长期持续更新的「我们对 X 的认知」，`source_count > 0`（未 ingest 完整来源的占位 stub 例外，须打 `#to-be-updated` 或 `#stub`），`sources:` 常指向 `[[wiki/sources/...]]` 二级摘要而非直接引 raw——第 6 步更新 / 新建的就是它们。
+
+知识节点层里再分 entity 与 concept（二者在 schema / lint 层**完全等价**，区分纯属语义惯例，靠模板结构落地）：
+
+| | **concept（概念）** | **entity（实体）** |
+|---|---|---|
+| 对象 | 抽象的思想 / 方法 / 制度 / 术语 | 被命名的真实主体：人 / 组织 / 产品 / 项目 |
+| 招牌结构 | 「定义 → 核心原理 → 应用」式阐释，**无属性表** | 「## 基本信息」**属性表**（类别 = 人物/组织/产品/项目） |
+| 气质 | 阐释「X 是什么、怎么运作、和别的概念什么关系」 | 画像「这个对象是什么、数据如何、和谁有关」 |
+| 模板 → 目录 | `wiki/_templates/concept_template.md` → `wiki/concepts/` | `wiki/_templates/entity_template.md` → `wiki/entities/` |
+| 例 | Transformer 架构 / Graph RAG / De Minimis 免税 | Anthropic / SHEIN / 某具体产品 |
+
+**三问速判**：① 在复述某一篇具体材料？→ `source_summary`。② 是个能指着说「就是这家公司 / 这个产品 / 这个人」的专有名词？→ `entity`。③ 是个「X 是什么、怎么运作」的抽象概念？→ `concept`。
+
+> **不必纠结 entity / concept 的边界**：选错不卡流程——mis-classification 由 lint（`python scripts/k.py list-orphans` 等）事后检测、web 端人工纠正（同第 8 步 MOC 归属的可纠正性）。遇到「命名方法 / 框架」这类模糊对象（如 RLHF），默认按「抽象 → `concept`」走即可。
+
 ## 第 5 步：创建来源摘要页
 
 用 `Write` 创建 `wiki/sources/<slug>.md`。**必须包含**：
@@ -153,7 +174,7 @@ type: source_summary
 created_date: 2026-04-28      # 今天
 last_modified: 2026-04-28
 last_modified_by: LLM
-status: draft
+status: draft                  # LLM 写入一律 draft；reviewed 仅人类审阅后设（并把 last_modified_by 改 Human）
 confidence: high               # 看你对来源可信度的判断
 source_count: 1
 sources:
@@ -219,6 +240,62 @@ python scripts/k.py validate-frontmatter wiki/sources/<slug>.md
 - 在相关 H2/H3 段落新增信息（带 `[[raw/...]]` 引用）
 - 更新 frontmatter 的 `last_modified` 与 `source_count`
 - 在 sources 字段加入新来源
+- **互链相关概念 / 实体**时，凡关系属标准类型即用 `[[目标|SUPPORTS]]` 等标准关系类型（白名单 7 类：`SUPPORTS`/`REFUTES`/`EXTENDS`/`IS_A`/`PART_OF`/`ALTERNATIVE_TO`/`CITES`），让第 9 步的类型化图谱可按边染色；非标准关系仍按显示别名处理
+
+### 关系词决策树（防 ALTERNATIVE_TO 偷懒）
+
+写互链 `[[目标|RELATION]]` 时先走决策树，不要凭直觉先写一个再看：
+
+```text
+写互链时先问：这条 wiki link 在表达什么？
+  │
+  ├─ A 在 B 的基础上做了**增量**（同团队 / 直接引 B 的方法 / B 之上加层）
+  │    → [[B|EXTENDS]]           例：MiniRAG → LightRAG（同一团队、增量）
+  │
+  ├─ A 给 B 的某个**核心论断**提供了直接证据（数据 / 定理 / 实验）
+  │    → [[B|SUPPORTS]]          例：RAGAS → RAG Evaluation（提供评测证据）
+  │
+  ├─ A **反驳** B 的核心论断（直接反例 / 反证）
+  │    → [[B|REFUTES]]           例：Long-context 工作 → RAG
+  │
+  ├─ A 是 B 的**严格子类**（taxonomy 关系：所有 A 都是 B、且 A 有 B 没有的特征）
+  │    → [[B|IS_A]]              例：ColBERTv2 → late interaction 范式
+  │
+  ├─ A 是 B 的**物理/逻辑组件**（A 没 B 不成立）
+  │    → [[B|PART_OF]]           例：Retriever → RAG（少 RAG 就不成立）
+  │
+  ├─ A 与 B 是**同位替代方案**（解决同一问题、不同方法路线）
+  │    → [[B|ALTERNATIVE_TO]]    例：GraphRAG ↔ HippoRAG（都是 graph 派 RAG）
+  │
+  ├─ A 只是**文献引用**了 B（无立场、无结构关系）
+  │    → [[B]] 或 [[B|CITES]]    默认 REFERENCES；CITES 仅作者显式做了文献引用时
+  │
+  └─ 不属于以上任何一种
+       → 不要写 RELATION；用 alias（[[B|友好名]]）或纯 [[B]]，避免被 graph 误染色
+```
+
+**7 个关系词的语义边界**（避免混用）：
+
+| 关系 | 真正适用 | 不该用（应改） |
+|---|---|---|
+| EXTENDS | 同团队 / 同期同源 / 直接增量 | "与 X 类似" → 是 ALTERNATIVE_TO 或 SUPPORTS |
+| SUPPORTS | A 提供 B 论断的直接证据 | "A 也讨论了 B" → 是 CITES 或默认 REFERENCES |
+| REFUTES | A 直接反证 B 的核心论断 | "A 批评 B 某细节" → 多半是 EXTENDS 增量修正 |
+| IS_A | 严格 taxonomy（X 是 Y 的一种） | "X 属于 Y 领域" → 是 CITES 或 PART_OF |
+| PART_OF | A 没 B 不成立（强组成） | "A 在 B 主题下讨论" → 是 CITES |
+| ALTERNATIVE_TO | 解决同一问题的不同方法路线 | "A 替代 B 的某个组件" → 是 PART_OF |
+| CITES | 作者显式做了文献引用 | 默认走 [[B]] REFERENCES，CITES 收窄 |
+
+**反面例子 vs 正确例子**：
+
+| 反例（plain wikilink 丢语义） | 正确（带关系类型，图谱可染色） |
+|---|---|
+| 本文挑战 [[wiki/concepts/foo]] | 本文挑战 [[wiki/concepts/foo\|REFUTES]] |
+| A 替代 [[wiki/concepts/bar]] | A 替代 [[wiki/concepts/bar\|ALTERNATIVE_TO]] |
+| X 关键证据 [[wiki/sources/y]] | X 关键证据 [[wiki/sources/y\|SUPPORTS]] |
+| X 是 [[wiki/concepts/rag]] 的一种 | X 是 [[wiki/concepts/rag\|IS_A]] |
+
+**防 LLM 偷懒**：`list-relation-balance` lint 会扫全库，若某关系词占比 > 30% 报警（防 ALTERNATIVE_TO 偷懒用最弱关系词）。`list-implicit-relations` lint 扫 plain wikilink + 判断/立场动词段落，提示应补 RELATION。
 
 ## 第 7 步：标记次要节点为待更新
 
@@ -244,6 +321,8 @@ python scripts/k.py search "<相关概念>" --json
 python scripts/k.py list-pages --type=index --json
 ```
 
+> **MOC 粒度（防巨型索引）**：单一主题的来源页 > ~8 篇时，从总索引拆出**主题子 MOC**（如「图结构 RAG」「评测·基准」「检索基础与嵌入」）。子 MOC 的 `scope` 用花括号枚举成员（`wiki/sources/{a,b,c,...}`）使 glob 匹配数 == `page_count`、过 `list-index-mismatches`；root_index 链入各子 MOC，形成多级导航而非一个 100+ 页的扁平索引。
+
 **自动判断流程**（agent 自决，不询问用户）：
 
 1. 取 source_summary 的 `tags` 字段（第 5 步写入的）
@@ -260,7 +339,24 @@ python scripts/k.py list-pages --type=index --json
 
 > **领域归属的可纠正性**：AI 的自动归属可能选错（比如新领域被错挂到旧 MOC）。这种错误由 lint 流程检测——`k.py list-orphans` 会标出"理论上属于某领域但孤立"的页面，人工 web 端可一键迁移。AI 不卡流程，错了可纠正。
 
-## 第 9 步：追加 log.md
+## 第 9 步：图谱接入与校验
+
+ingest 的新页面会自动接入**类型化关系图谱**（节点 = 页面，边 = 双链 / 关系类型）。这层图谱是**派生层**——从 wiki 双链实时计算、无持久文件（对齐「markdown 是唯一真相源」），所以本步**只校验、不产出需提交的文件**。提交前跑两条命令：
+
+```bash
+# 1) 关系类型合法性：扫"看起来像关系类型但不在白名单"的拼写错误 / 非标准词
+python scripts/k.py --workspace <name> list-relation-issues
+
+# 2) 图谱生成：确认本次新页面已作为节点接入、边正常
+python scripts/k.py --workspace <name> graph
+```
+
+验收标准：
+- `list-relation-issues` **为空**（非标准关系类型会退化成普通别名、不染色，多半是拼写错误如 `SUPORTS`）。
+- `graph` 能正常输出节点 / 边统计，本次新建 / 更新的页面**出现在节点里且有边相连**；出现意外**孤立节点**说明漏了互链——回第 6 步给它补 `[[...]]`（相关概念 / 实体用标准关系类型 `SUPPORTS` / `EXTENDS` / `PART_OF` 等）。
+- web 端 `/graph` 可直接渲染本图谱（节点按 type 染色、边按 link_type 染色），无需额外构建步骤。
+
+## 第 10 步：追加 log.md
 
 `Edit` `log.md`，在文件**头部**（最近的 `---` 后）插入：
 
@@ -274,7 +370,7 @@ python scripts/k.py list-pages --type=index --json
 - 摘要：<一两句核心收获>
 ```
 
-## 第 10 步：原子提交
+## 第 11 步：原子提交
 
 ```bash
 # 仅 add 本次操作涉及的文件，不要用 git add -A
@@ -335,11 +431,14 @@ git commit -m "ingest: <来源标题简短>"
 - [ ] 中长文档（≥30K 字符，即第 ②/③ 档）通过 `outline` → `read-section` 路线分段读取，不是 Read 全文
 - [ ] 关键章节已 `annotate-section` 回填精排摘要（②③ 档必经；① 档建议性、非硬性）
 - [ ] 摘要页 frontmatter 完整且 `validate-frontmatter` 通过
-- [ ] 所有实质性论断都有 `[[raw/...#^h-...]]` 或 `[[raw/...#^p-...]]` anchor 引用，没有"裸论断"，没有用 heading 文本作引用
+- [ ] 所有实质性论断都有 `[[raw/...#^h-...]]` 或 `[[raw/...#^p-...]]` **块级** anchor 引用，没有"裸论断"、没有"整页引用 `[[raw/X]]` 支撑论断"、没有用 heading 文本作引用——`python scripts/k.py list-bare-claims` / `list-coarse-citations` / `list-source-issues` 三者均须为空
 - [ ] `python scripts/k.py list-broken-refs` 没有新增失效引用
 - [ ] 核心节点（2-3 个）已立即更新
 - [ ] 次要节点已标记 `#to-be-updated`
 - [ ] MOC 索引已更新
+- [ ] `python scripts/k.py list-relation-issues` 无非标准关系类型（图谱关系白名单干净）
+- [ ] `python scripts/k.py graph` 正常生成、本次新页面已接入图谱（无意外孤立节点）
+- [ ] 高频跨篇专名（benchmark / model / org，如 BM25 / MTEB / Llama）已考虑立或更新 `entity` 页（避免重要实体只散落在各 source 页里、无法聚合）
 - [ ] log.md 追加了完整条目
 - [ ] git commit 出现在 `git log` 第一条
 - [ ] commit 包含本次 ingest 的所有应入库文件（wiki 改动 + log.md；raw/ 及其派生 .md/.outline.json 默认被 .gitignore 排除、留在本地），没有无关改动

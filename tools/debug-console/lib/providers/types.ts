@@ -12,7 +12,7 @@
  *   - tool 调用走 CC/Codex 自己的 Read/Grep，不走 /api/agent-tool
  */
 
-export type ProviderId = "deepseek" | "anthropic" | "openai" | "claude-code" | "codex";
+export type ProviderId = "deepseek" | "claude-code" | "codex";
 
 export interface ProviderInfo {
   id: ProviderId;
@@ -64,6 +64,9 @@ export interface ToolResultRecord {
 /** Provider 流出来的事件，agent-loop 转发给 SSE 客户端 */
 export type AgentEvent =
   | { kind: "text-delta"; text: string }
+  /** 推理模型（DeepSeek deepseek-v4 等）的思维链增量；与正文 text-delta 分开，
+   *  前端渲染为可折叠「思考过程」区块。关思考时不产生。 */
+  | { kind: "reasoning-delta"; text: string }
   | {
       kind: "tool-call";
       id: string;

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { isScrollClaimed } from "@/lib/scroll-memory";
 
 /**
  * Next.js 客户端导航不会触发浏览器原生的 fragment 滚动——
@@ -22,6 +23,83 @@ function decodeHash(raw: string): string {
   } catch {
     return raw;
   }
+}
+
+/**
+ * 把锚点元素归一到「该参考块的起点元素」。
+ *
+ * convert.py 把「块级锚点」一律追加到块的**最后一行**，于是渲染后 id 落在块的最后一个
+ * 子元素上：
+ *   - 表格 → 最后一行的某个 `<td>`（经 relocateTableRowAnchors 搬入单元格）
+ *   - 多项列表 → 最后一个 `<li>`（整张列表是一个 ^p-N 块、锚点只标在末项）
+ *   - 多段引用块 → 最后一个 `<p>`
+ *   - 代码块 → `<pre>` 内的 `<code>`（高亮 code 会漏掉 pre 的内边距/边框，看着只高亮一部分）
+ * 直接滚到 / 高亮该子元素会停在块的中部 / 末尾或只盖住一部分——用户看到的是「参考段落
+ * 最后面的内容」或「只高亮了一部分」。故向上归一到**最外层**的 表格 / 列表 / 引用块 / 代码块，
+ * 滚动与高亮都以整块为准。
+ *
+ * 安全性：单段落（无此类祖先）原样返回；单项列表归一到只含一项的列表、起点≈自身，无副作用；
+ * 嵌套列表取最外层（^p-N 块本就是顶层列表）。爬到正文 / 滚动容器边界即停，绝不整页归一。
+ */
+function resolveBlockTarget(el: HTMLElement): HTMLElement {
+  let target: HTMLElement = el;
+  for (
+    let cur: HTMLElement | null = el;
+    cur && !cur.matches?.("[data-kb-scroll-main], main, article, body");
+    cur = cur.parentElement
+  ) {
+    if (cur.matches?.("table, ul, ol, blockquote, pre")) target = cur; // 记最外层命中
+  }
+  return target;
+}
+
+const HIGHLIGHT_CLASS = "kb-hash-highlight"; // 单块：背景 + 外圈
+const HIGHLIGHT_REGION_CLASS = "kb-hash-highlight-region"; // 多块连片：仅背景，避免每段都套一圈
+const HIGHLIGHT_MS = 2600; // 与 globals.css 的 kb-hash-flash* 动画时长一致
+let highlightTimer: number | undefined;
+let highlightEls: HTMLElement[] = [];
+
+const HEADING_RE = /^H[1-6]$/;
+const SECTION_STOP_RE = /^(H[1-6]|HR)$/; // 标题 / 分隔线 = 不算正文首块
+
+/**
+ * 决定「高亮哪些元素」。
+ *
+ * 标题锚点（^h-N → `<h1..6>`）特殊：它只是一行标题，只高亮 `<h>` 会让用户看到「只高亮了
+ * 标题、下面的小字没高亮」。所以把**标题 + 紧随其后的首个正文块**一起高亮——这恰好与悬浮
+ * 「章节预览」展示的内容一致（预览也是标题 + firstBlock）。
+ *
+ * 只接「首块」、不贪整节：一节可能很长（含大表格等），全染既与预览不符、视觉也过重。首块
+ * 若是标题 / 分隔线（空节）则只高亮标题本身。其它块（表格/列表/段落/代码块）已由
+ * resolveBlockTarget 归一为整块，单元素高亮即可。
+ */
+function resolveHighlightTargets(el: HTMLElement): HTMLElement[] {
+  if (!HEADING_RE.test(el.tagName)) return [el];
+  const targets: HTMLElement[] = [el];
+  const next = el.nextElementSibling as HTMLElement | null;
+  if (next && !SECTION_STOP_RE.test(next.tagName)) targets.push(next); // 仅首块
+  return targets;
+}
+
+/** 给目标块加一段渐隐高亮，提示用户「就是这一段」。重复点同一锚点也能重新触发。
+ *  传入多个元素（标题 + 其正文）时用「仅背景」变体连成一片，不给每段都套外圈。 */
+function flashHighlight(els: HTMLElement[]) {
+  if (typeof window === "undefined" || els.length === 0) return;
+  const cls = els.length > 1 ? HIGHLIGHT_REGION_CLASS : HIGHLIGHT_CLASS;
+  // 清掉上一处高亮（如连续点不同引用）
+  highlightEls.forEach((e) => {
+    e.classList.remove(HIGHLIGHT_CLASS, HIGHLIGHT_REGION_CLASS);
+  });
+  window.clearTimeout(highlightTimer);
+  els.forEach((e) => e.classList.remove(HIGHLIGHT_CLASS, HIGHLIGHT_REGION_CLASS));
+  void els[0].offsetWidth; // 强制 reflow → 重启 CSS 动画（重复点同一锚点也能再闪）
+  els.forEach((e) => e.classList.add(cls));
+  highlightEls = els;
+  highlightTimer = window.setTimeout(() => {
+    highlightEls.forEach((e) => e.classList.remove(HIGHLIGHT_CLASS, HIGHLIGHT_REGION_CLASS));
+    highlightEls = [];
+    highlightTimer = undefined;
+  }, HIGHLIGHT_MS);
 }
 
 /** 找到 element 最近的可滚祖先（overflow-y: auto/scroll）。none 则 fallback 到 window. */
@@ -120,11 +198,18 @@ function scrollToHash() {
   let cancelled = false;
   const tryScroll = () => {
     if (cancelled) return;
-    const fresh = document.getElementById(hash);
-    if (!fresh) {
+    // 后退/前进还原阅读位置时（ScrollMemory 已接管），让位——否则会把页面又拽到
+    // 锚点，盖掉用户离开时的真实滚动位置。所有滚动路径（路由变化 rAF、同页
+    // hashchange）都汇到这里，故只在此判一次即可。同页脚注点击属「全新到达」、
+    // ScrollMemory 不会 claim，不受影响。
+    if (isScrollClaimed()) return;
+    const found = document.getElementById(hash);
+    if (!found) {
       if (debug) console.warn("[HashScroller] element NOT found at scroll time", hash);
       return;
     }
+    // 表格锚点落在单元格上 → 归一到整张 <table>，否则会停在表格中部看不到表头
+    const fresh = resolveBlockTarget(found);
     const ancestor = findScrollableAncestor(fresh);
     const elRect = fresh.getBoundingClientRect();
     if (debug) {
@@ -144,6 +229,8 @@ function scrollToHash() {
       });
     }
     scrollElementToTop(fresh);
+    // 滚动以块起点为准（标题→标题本身），高亮则可跨多元素（标题 + 其下正文）
+    flashHighlight(resolveHighlightTargets(fresh));
   };
 
   const onTimeout = () => {

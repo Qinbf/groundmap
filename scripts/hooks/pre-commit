@@ -11,6 +11,8 @@
 #     兜底 `git add -f` 强制绕过的情形。
 #   - my_thoughts/**：全部拦截（人类专属区）。
 #   - 同时覆盖两种布局：旧顶层 raw|my_thoughts/ 与现行 workspaces/<name>/raw|my_thoughts/。
+#   - 放行 .gitkeep：仅为保留空目录骨架（fresh clone 里 raw/ my_thoughts/ 应存在供用户放数据），
+#     是空占位、不含任何实际内容，不违背只读区保护。
 #
 # 例外：人类如确需提交受保护路径，用 `git commit --no-verify` 显式跳过本 hook
 # （pre-commit 阶段拿不到本次 commit message，无法按 "human:" 前缀豁免——
@@ -26,6 +28,7 @@ set -e
 forbidden=$(
     git -c core.quotepath=false diff --cached --name-only \
         | grep -E '^(raw|my_thoughts)/|^workspaces/[^/]+/(raw|my_thoughts)/' \
+        | grep -vE '(^|/)\.gitkeep$' \
         || true
 )
 

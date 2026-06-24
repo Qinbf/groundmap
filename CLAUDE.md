@@ -58,22 +58,60 @@ groundmap/                   # 引擎根（通用代码 + 规范）
 ├── web/                     # Web 管理台（Next.js）——通用
 ├── .claude/skills/          # Claude Code 技能定义——通用
 ├── workspaces/              # 多主题工作区（可切换）
-│   ├── smb-ecommerce/       # ← 当前默认 workspace
+│   ├── my-research/         # ← 用户创建的示例 workspace
 │   │   ├── wiki/            # agent 维护的 Wiki（可读写）
 │   │   ├── raw/             # 原始资料（agent 不可改原始文件）
 │   │   ├── exports/         # 输出物归档
 │   │   ├── my_thoughts/     # 人类专属区（agent 只读）
 │   │   ├── .cache/          # SQLite 索引（gitignored，可重建）
 │   │   └── log.md           # 操作日志
-│   ├── rag-evolution/       # ← RAG 演进主题（来自 rag-evolution-demo）
+│   ├── research-topic-2/         # ← 第二个 workspace 示例（用户自己创建）
 │   │   └── ...
-│   └── ai-ml-demo/          # ← AI/ML 论文主题
+│   └── research-topic-3/         # ← 第三个 workspace 示例（用户自己创建）
 │       └── ...
 ├── wiki/                    # 引擎级 wiki（仅 _templates）
 ├── tools/                   # 独立子工具，不属于 KB 核心
 │   └── debug-console/       # 调试界面（v0.3）
 └── .cache/                  # 引擎级缓存
 ```
+
+---
+
+## 双仓库同步约定（dev ↔ release）
+
+本仓库（`AI知识库/`）与 `groundmap-release/` 是**两个独立 Git 仓库**承担不同角色：
+
+| 仓库 | 角色 | 数据 | 分支 |
+|---|---|---|---|
+| `AI知识库/`（本仓） | **开发版** | 含实际 wiki / raw / exports 数据 | `rag-evolution-ip-standard` 等 |
+| `groundmap-release/` | **发布版** | `workspaces/` 为空，仅引擎 + 已审的发布准备改动 | `main` |
+
+**哪些修改必须双仓同步**（任一改完都需在另一仓做对应改动，否则下次 sync 漂移）：
+
+1. **`scripts/k.py`、`scripts/convert.py`、`scripts/section_parser.py`、其他通用引擎代码**：
+   同步整个文件；release 的 workspace fallback 逻辑（k.py 第 2644-2671 行）保留不动。
+2. **`scripts/tests/`**（含 `TestMirrorSync` 守护）：**完全镜像**——dev 改了测试，release 必须改相同处。
+3. **`.claude/skills/kb-*/SKILL.md` 与 `.agents/skills/kb-*/SKILL.md`**：SKILL.md 内容**逐字相同**（`.claude ↔ .agents` 由 `TestMirrorSync.test_skills_mirror` 守），dev 与 release 之间靠人肉 / rsync 同步。
+4. **`web/`（Next.js 管理台）**：dev 与 release 同步主要 UI 改动；release 可能含更多发布准备（i18n key 整理、未发布特性等），合并时以 release 为基线。
+5. **`docs/`**（用户文档）：dev 写新内容 → 同步到 release；release 的发布准备改动（demo 视频、新手教程）一般不回 dev。
+
+**哪些修改不要镜像到 release**：
+
+- 实际的 `workspaces/<name>/wiki/**`、`raw/**`、`exports/**`——只在 dev 维护（release 的 `workspaces/` 应保持空）。
+- dev 专属的实验性 lint / 临时脚本。
+
+**不变量清单**（任一变动都视作"破坏不变量"、必须同时同步）：
+
+- `RELATION_TYPES` 白名单 7 类（k.py ↔ web/lib/markdown.ts）
+- `WIKILINK_RE` 正则（k.py ↔ web/lib/markdown.ts）
+- `TestMirrorSync` 的归一化规则（CLAUDE.md ↔ AGENTS.md ↔ `.claude/skills ↔ .agents/skills`）
+- 默认 workspace 名（dev `smb-ecommerce`，release `my-research`——**故意不同**，反映发布清理意图）
+
+**`TestMirrorSync` 守护的镜像范围**（仅在单仓内）：
+
+- `CLAUDE.md` ↔ `AGENTS.md`（按归一化：Claude Code/Codex、CLAUDE.md/AGENTS.md、`.claude/skills/.agents/skills` 三组替换后必须一致）
+- `.claude/skills/*/SKILL.md` ↔ `.agents/skills/*/SKILL.md`（同归一化）
+- **dev 与 release 之间没有跨仓镜像测试**——必须靠"修改后手动 sync + 跑两侧 `pytest scripts/tests/`"保证
 
 ---
 
@@ -98,31 +136,31 @@ groundmap/                   # 引擎根（通用代码 + 规范）
 ### k.py CLI
 
 ```bash
-# 默认 workspace（smb-ecommerce）
+# 默认 workspace（my-research）
 python scripts/k.py health --json
 
 # 指定 workspace
-python scripts/k.py --workspace rag-evolution health --json
-python scripts/k.py --workspace ai-ml-demo search "transformer"
+python scripts/k.py --workspace my-research health --json
+python scripts/k.py --workspace my-research search "transformer"
 ```
 
 ### Web 管理台
 
 ```bash
-# 默认 workspace（smb-ecommerce）
+# 默认 workspace（my-research）
 cd web && npm run dev
 
 # 指定 workspace
-cd web && KB_WORKSPACE=rag-evolution npm run dev
-cd web && KB_WORKSPACE=ai-ml-demo npm run dev
+cd web && KB_WORKSPACE=my-research npm run dev
+cd web && KB_WORKSPACE=my-research npm run dev
 ```
 
-> `KB_WORKSPACE` 设的是 Web 启动时的**初始/默认** workspace；启动后顶栏有 **workspace 切换器**（`WorkspaceSwitcher`，写 cookie `kb_workspace` + reload），可在界面直接切库、**无需重启**（仅当 >1 个 workspace 时显示）。cookie 值会校验为真实存在的 workspace（`resolveWorkspace()`），防穿越/指向不存在的库。解析优先级：cookie `kb_workspace` > `KB_WORKSPACE` env > 默认 `smb-ecommerce`，`k.py` 子进程调用同口径。
+> `KB_WORKSPACE` 设的是 Web 启动时的**初始/默认** workspace；启动后顶栏有 **workspace 切换器**（`WorkspaceSwitcher`，写 cookie `kb_workspace` + reload），可在界面直接切库、**无需重启**（仅当 >1 个 workspace 时显示）。cookie 值会校验为真实存在的 workspace（`resolveWorkspace()`），防穿越/指向不存在的库。解析优先级：cookie `kb_workspace` > `KB_WORKSPACE` env > 默认 `my-research`，`k.py` 子进程调用同口径。
 
 ### 设计原则
 
 - 所有 workspace 共享同一个 Git repo（引擎代码 + 数据一起版本控制）
-- 不指定 workspace 时默认使用 `smb-ecommerce`（向后兼容）
+- 不指定 workspace 时默认使用 `my-research`（向后兼容）
 - 每个 workspace 内部结构相同（wiki/、raw/、exports/、my_thoughts/、.cache/、log.md）
 - `wiki/_templates/` 保留在引擎根，所有 workspace 共用
 
@@ -172,6 +210,16 @@ tags: []
 > **source_summary 类型可选字段**：
 > - `partial_ingest_count`: 该来源被 partial re-ingest 升级的次数（可选；默认不写即 0）
 > - 正文 H2 节：`## AI 综合判断`（含 3 个 H3：核心价值 / 关联 / 冲突）；第 ③ 档长文档另含 `## 章节深度登记` 表（详见 `.claude/skills/kb-ingest/SKILL.md`）
+
+### `status` 字段约定
+
+`status: reviewed`（UI 显示「已审阅」）的语义是**人类审阅过**，**不是** agent 自评。约定：
+
+- **LLM 写入 / 更新的页面 `status` 一律 `draft`**（ingest 与模板默认即 `draft`），且 `last_modified_by: LLM`。
+- **`reviewed` 只能由人类**在 web 管理台审阅后设置，并**同时**把 `last_modified_by` 改为 `Human`——二者绑定，不可只改其一。
+- agent **不得**把自己写入的页面标 `reviewed`（那是"自称已审"，违反人类审阅闸门）。
+
+**lint 检查**：`python scripts/k.py list-status-issues` 扫 `status: reviewed` 但 `last_modified_by != Human` 的矛盾页（接入 `health` 的 `status_issues_count`）。
 
 ### source_count 字段约定
 
@@ -245,6 +293,8 @@ tags: []
 
 无法提供精确来源时，必须显式标注 `[需要来源]`，**不得省略**或猜测。
 
+**粒度硬约束（lint 守门）**：整篇引用 `[[raw/X]]`（无 `#^`）**仅限**「来源绑定 / 纯背景介绍」；任何含数字 / 指标 / 结论的**实质论断必须**用块级 anchor `[[raw/X#^...]]`——整页引用去支撑论断属"引用粒度不足"。由 `python scripts/k.py list-coarse-citations` 扫出（接入 `health` 的 `coarse_citations_count`），与 `list-bare-claims`（有数字但无任何引用）互补：前者治"引得太粗"，后者治"没引"。块级 anchor 才能精确溯源、并在 web 端渲染为论文式 `[n]` 上标。
+
 ### 关系类型语法（v0.4b 图谱）
 
 普通双链 `[[X]]` 只表达"A 引用了 B"，不带语义。要让图谱可视化与下游分析能区分"支持 / 反驳 / 扩展"等关系，可在第三段写**标准关系类型**：
@@ -271,7 +321,7 @@ tags: []
 
 **lint**：`python scripts/k.py list-relation-issues` 扫"看起来像关系类型但不在白名单"（典型为拼写错误 `SUPORTS` / 用了非标准词 `IMPLEMENTS`）；接入 `health` 的 `relation_issues_count`。
 
-**图谱可视化**：`python scripts/k.py graph` 输出 `{nodes, edges}` JSON；web 端 `/graph` 用 React Flow 渲染，节点按 type 染色、边按 link_type 染色（`REFERENCES` 灰 / `SUPPORTS` 绿 / `REFUTES` 红 / …）。
+**图谱可视化**：`python scripts/k.py graph` 输出 `{nodes, edges}` JSON；web 端 `/graph` 用 React Flow 渲染，节点按 type 染色、边按 link_type 染色（`REFERENCES` 灰 / `SUPPORTS` 绿 / `REFUTES` 红 / …）。**图谱接入校验已纳入 ingest 收尾**（见「Ingest 操作流程」第 11 步）——图谱是从 wiki 双链实时计算的派生层，无需单独构建步骤。
 
 ---
 
@@ -313,8 +363,9 @@ tags: []
 8. agent 立即更新最核心的 2-3 个节点页面
 9. agent 给其余受影响页面打 `#to-be-updated` 标签
 10. agent **自动决定 MOC 归属**：用 source_summary 的 tags 反查现有 MOC，命中则在「近期更新」节追加；无命中则用 `_templates/index_template.md` 自动新建 MOC + 在 root_index 加入口
-11. agent 追加 log.md 条目
-12. agent `git commit -m "ingest: <来源标题>"` 原子提交（只含 `wiki/**` 改动 + `log.md`；`raw/` 及其派生 .md / .outline.json 默认被 `.gitignore` 排除、留在本地，不入库——版权与隐私原因）
+11. agent **图谱接入与校验**：写互链时凡关系属标准类型（支持/反驳/延伸/属于/组成/替代/引用）即用 `[[目标|SUPPORTS]]` 等标准关系类型（白名单见「关系类型语法（v0.4b 图谱）」节）让图谱可按边染色；收尾跑 `python scripts/k.py list-relation-issues`（须为空）与 `python scripts/k.py graph`（确认本次新页面已作为节点接入、边正常、无意外孤立节点——孤立即回第 8 步补 `[[...]]` 互链）。图谱是**派生层**（从 wiki 双链实时计算、无持久文件，对齐「markdown 是唯一真相源」），本步只校验、不产出需提交的文件
+12. agent 追加 log.md 条目
+13. **提交前质量闸门**（须全过，不过则补齐再提交）：`python scripts/k.py list-bare-claims` / `list-coarse-citations` / `list-source-issues` / `list-broken-refs` / `list-relation-issues` 须全空——裸论断补块级引用、整页引用升块级、缺 source 补全、失效引用修掉、非法关系词改正。通过后 agent `git commit -m "ingest: <来源标题>"` 原子提交（只含 `wiki/**` 改动 + `log.md`；`raw/` 及其派生 .md / .outline.json 默认被 `.gitignore` 排除、留在本地，不入库——版权与隐私原因）
 
 > **partial re-ingest（增量深化）**：第 ③ 档扫读 / 跳过的章节保留升级路径，由 kb-query / kb-lint / 用户 web 端三种方式触发深化。AI 自动重读该章节 → 更新现有 source_summary（不新建）→ 章节登记表 ⊙ → ✓ → log.md 记 `partial-ingest` 类型 → git commit。
 
@@ -349,6 +400,8 @@ skill 设计了 4 个深度模式，但**Claude Code 中默认且唯一行为是
 - 接入 DeepSeek / 其他 LLM 时的 system prompt 注入
 
 3 个高级模式的执行规范详见 `.claude/skills/kb-query/SKILL.md` 第 7a/b/c 步。它们是**设计契约**——为产品化时的 agent 提供明确的"该模式下做什么"指令，不在 Claude Code 默认行为内。
+
+> **细节下钻判据（所有模式共有，quick 也执行——与上面 3 个产品化预留模式不同）**：回答前若某论断需要**原文级精确**（精确引文 / 数字 / 日期 / 条款，或来源为第 ③ 档长文档），agent 必须先 `read-block` / `read-section` 打开对应 anchor 核验原文再下结论——保证"真正需要原文细节时必然回查"、不靠 agent 自觉；A 类常见问题（定义 / 概览，detail 已蒸馏进 wiki）不命中、不额外费 token。audit 是它的"全量强化版"（对答案里**每条**引用都回查）。详见 `.claude/skills/kb-query/SKILL.md` 第 4.6 步。
 
 ### Lint 操作流程
 

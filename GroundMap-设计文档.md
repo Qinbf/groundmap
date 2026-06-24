@@ -117,8 +117,6 @@ AI知识库/                       # 引擎根（通用代码 + 规范）
 ```
 
 > **❌ 已废弃 / 不存在**：早期设计中的 `backend/`（`backend/src/knowledge{,_mcp,_rest}/` 的 MCP + REST 适配器）**从未落地**——随 v0.5 MCP server 计划一并废弃（见 §10.5）。REST 与写操作能力实际由 `web/`（Next.js 的 route handler + `web/lib/operations.ts` 的 server action）提供，不需要独立后端进程。
->
-> `claude_code源码/`（参考实现）仅作架构借鉴，已 gitignore，不属于知识库本身。
 
 ### 2.3 多工作区（workspace）模型
 

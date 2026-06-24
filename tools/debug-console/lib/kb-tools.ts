@@ -2,8 +2,7 @@
  * KB 工具注册表 — 单一 source of truth
  *
  * 每个工具的 name / description / JSON schema 在此定义一次，
- * 然后导出三种格式供不同 provider 使用：
- *   - getAnthropicTools()   → Anthropic SDK native tool-use 格式
+ * 然后导出两种格式供不同 provider 使用：
  *   - getOpenAITools()      → OpenAI function calling 格式（DeepSeek/Moonshot/...）
  *   - listToolNames()       → 仅名字列表（给 Claude Code / Codex 桥接展示用）
  *
@@ -204,15 +203,6 @@ export function getTool(name: string): KbTool | undefined {
 
 export function listToolNames(): string[] {
   return KB_TOOLS.map((t) => t.name);
-}
-
-/** Anthropic native tool-use 格式（直接是 input_schema）*/
-export function getAnthropicTools() {
-  return KB_TOOLS.map((t) => ({
-    name: t.name,
-    description: t.description,
-    input_schema: t.input_schema,
-  }));
 }
 
 /** OpenAI function calling 格式（DeepSeek / OpenAI / Moonshot 等通用）*/

@@ -63,9 +63,14 @@ export function resolveWorkspace(): string {
     // 与 cookie 分支同口径做存在性校验：env 拼错时若直接采纳，写路径的
     // mkdir recursive 会凭空建出错误 workspace 并静默写入，用户难以察觉
     if (listWorkspaces().includes(envWs)) return envWs;
-    console.warn(`[kb] KB_WORKSPACE="${envWs}" 不是已存在的 workspace，回退默认 ${DEFAULT_WORKSPACE}`);
+    console.warn(`[kb] KB_WORKSPACE="${envWs}" 不是已存在的 workspace，回退默认`);
   }
-  return DEFAULT_WORKSPACE;
+  // 最终兜底：DEFAULT_WORKSPACE 存在就用它；否则自动选第一个可用 workspace
+  // （与 k.py 数据驱动选库一致——发布版即便无同名默认库也能开箱读到内容，
+  //  不会因默认库名不存在而读不到任何库）。
+  const all = listWorkspaces();
+  if (all.includes(DEFAULT_WORKSPACE)) return DEFAULT_WORKSPACE;
+  return all[0] ?? DEFAULT_WORKSPACE;
 }
 
 /**

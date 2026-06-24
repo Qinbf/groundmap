@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useContext, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { normalizeLinkTarget, type RelationType } from "@/lib/markdown";
 import { useT } from "@/lib/i18n-client";
 import { usePopoverState } from "@/lib/popover-context";
@@ -202,6 +203,15 @@ function RawLinkWithPreview({
   const [data, setData] = useState<RawPreviewData | null>(null);
   const [loading, setLoading] = useState(false);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // trigger 元素引用 + popover 的视口坐标——popover 用 portal 渲染到 <body>，
+  // 避免被 <main overflow-x-hidden> 裁切、被右侧栏遮挡（见下方 createPortal）。
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const [coords, setCoords] = useState<{
+    top: number;
+    left: number;
+    placement: "below" | "above";
+    maxHeight: number;
+  } | null>(null);
 
   // 200ms 防抖：用户从一个链接快速划过另一个，不会触发中间所有链接的 fetch。
   // 仅在鼠标停留超过 200ms 才真正打开 popover（开始 useEffect 内的 fetch）。
@@ -225,6 +235,46 @@ function RawLinkWithPreview({
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     };
   }, []);
+
+  // 打开时按 trigger 在视口中的位置算出 popover 的 fixed 坐标；滚动 / 缩放时实时跟随。
+  // 关键约束：
+  //  - 水平左对齐 trigger，若右侧溢出视口（会被右侧栏挡住）则向左推回视口内
+  //  - 垂直默认在 trigger 下方，下方空间不足则翻到上方
+  useEffect(() => {
+    if (!open) {
+      setCoords(null);
+      return;
+    }
+    const POPOVER_W = 448; // w-[28rem] = 448px
+    const GAP = 6;
+    const MARGIN = 8; // 视口边缘留白
+    const update = () => {
+      const el = triggerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      let left = rect.left;
+      const maxLeft = window.innerWidth - POPOVER_W - MARGIN;
+      if (left > maxLeft) left = maxLeft;
+      if (left < MARGIN) left = MARGIN;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const placement: "below" | "above" =
+        spaceBelow < 220 && spaceAbove > spaceBelow ? "above" : "below";
+      const top = placement === "below" ? rect.bottom + GAP : rect.top - GAP;
+      // 卡片在所选方向上的可用高度，超出由内部 body 区域滚动（卡片本身不溢出视口）
+      const maxHeight = (placement === "below" ? spaceBelow - GAP : spaceAbove - GAP) - MARGIN;
+      setCoords({ top, left, placement, maxHeight });
+    };
+    update();
+    // capture=true：内层滚动容器（<main overflow-y-auto>）的 scroll 不冒泡到 window，
+    // 用捕获阶段才能监听到任意滚动源。
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open || data !== null) return;
@@ -278,11 +328,12 @@ function RawLinkWithPreview({
       : null;
 
   // 论文样式：refNum 模式下整个 link 渲染为 [n] 上标（仍保留 hover popover）。
-  // 上标点击跳到文末 References 区，原 raw 页跳转改为 References 项里的 link。
+  // 点 [n] 直接跳到源文档对应锚点（与 popover 头部地址同一目标）——用户预期「点引用＝看引用」；
+  // 文末「跨文档引用」列表仍照常渲染，作为整页的引用索引保留（滚动可达）。
   const linkClassName = refNum != null
     ? "text-primary no-underline hover:underline cursor-pointer"
     : "text-amber-600 dark:text-amber-400 underline decoration-dotted underline-offset-2 hover:decoration-solid";
-  const linkHref = refNum != null ? `#ref-${refNum}` : href;
+  const linkHref = href;
   const linkContent = refNum != null ? <>[{refNum}]</> : children;
 
   // 不用 title= 属性 — 避免浏览器原生 tooltip 与 React popover 同时弹出
@@ -301,22 +352,46 @@ function RawLinkWithPreview({
     </Link>
   );
 
+  // popover 用 portal 挂到 <body>：脱离 <main> 的 overflow 裁切与右侧栏的层叠上下文，
+  // fixed 定位 + z-50 保证「预览卡片永远浮在最上层、不被任何容器遮挡」。
+  const popoverStyle: CSSProperties | undefined = coords
+    ? {
+        position: "fixed",
+        top: coords.top,
+        left: coords.left,
+        // above 时以卡片底边贴住 trigger 顶边（top 为锚点，向上偏移整卡高度）
+        transform: coords.placement === "above" ? "translateY(-100%)" : undefined,
+        // 卡片整体不超出视口高度，超出部分由内部 body 区域滚动
+        maxHeight: Math.max(120, coords.maxHeight),
+      }
+    : undefined;
+
   return (
-    <span className="relative inline-block">
+    <span ref={triggerRef} className="inline-block">
       {refNum != null ? (
         <sup className="text-[0.7em] font-normal mx-0.5">{linkEl}</sup>
       ) : (
         linkEl
       )}
-      {open && (
+      {open && coords && typeof document !== "undefined" && createPortal(
         <div
           data-popover
-          className="absolute left-0 top-6 z-50 w-[28rem] max-w-[36rem] rounded-md border bg-popover p-3 text-xs text-popover-foreground shadow-lg"
+          style={popoverStyle}
+          className="z-50 w-[28rem] max-w-[36rem] flex flex-col rounded-md border bg-popover p-3 text-xs text-popover-foreground shadow-lg"
         >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] text-muted-foreground font-mono truncate flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 shrink-0">
+            {/* 头部路径即「打开来源页面」的入口：hover 预览只是窥视，点这里直接跳到
+                源文档对应锚点。论文式 [n] 上标仍跳文末 References 区（语义不变），
+                两条路径并存——用户既能看全部引用，也能从预览一键到源。 */}
+            <Link
+              href={href}
+              scroll={false}
+              onClick={closePopover}
+              title={t("wiki_link.open_source")}
+              className="text-[10px] text-muted-foreground hover:text-primary font-mono truncate flex-1 min-w-0 underline decoration-dotted decoration-muted-foreground/40 underline-offset-2 hover:decoration-solid"
+            >
               {target}{anchor ? `#^${anchor}` : ""}
-            </span>
+            </Link>
             {labelKey && (
               <span className="text-[9px] uppercase tracking-wide bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-mono shrink-0">
                 {t(labelKey)}
@@ -333,21 +408,24 @@ function RawLinkWithPreview({
             </button>
           </div>
           {data?.title && (
-            <div className="font-semibold text-sm mb-1">{data.title}</div>
+            <div className="font-semibold text-sm mb-1 shrink-0">{data.title}</div>
           )}
           {data?.agent_summary && (
-            <div className="text-[11px] italic text-muted-foreground border-l-2 border-muted pl-2 mb-2">
+            <div className="text-[11px] italic text-muted-foreground border-l-2 border-muted pl-2 mb-2 shrink-0">
               {data.agent_summary}
             </div>
           )}
           {loading ? (
             <div>{t("wiki_link.preview_loading")}</div>
           ) : bodyMarkdown ? (
-            <div className="max-h-[24rem] overflow-y-auto">
+            // flex-1 min-h-0：在卡片 maxHeight 约束下吸收剩余高度并滚动；max-h-[24rem]
+            // 保持「预览保持紧凑」的原意，二者取小。
+            <div className="min-h-0 flex-1 max-h-[24rem] overflow-y-auto">
               <MiniMarkdown content={bodyMarkdown} />
             </div>
           ) : null}
-        </div>
+        </div>,
+        document.body,
       )}
     </span>
   );

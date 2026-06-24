@@ -13,6 +13,7 @@
  *   - anchor 以 ^ 开头（去掉 ^ 后形如 p-/t-/c-/f-）→ read_block
  *   - 其他 anchor → read_section（k.py 同时支持 anchor 和 heading 标题）
  */
+import { t, DEFAULT_LOCALE, type Locale } from "./i18n";
 
 export interface WikiRef {
   path: string;
@@ -213,6 +214,36 @@ export function downgradeRefAnchors(text: string, downgradedKeys: Set<string>): 
     const key = `${ref.path}#${ref.anchor || ""}`;
     if (ref.anchor && downgradedKeys.has(key)) {
       return alias ? `[[${target}|${alias}]]` : `[[${target}]]`;
+    }
+    return full;
+  });
+}
+
+/**
+ * 把「在当前库根本不存在」的引用（后验 broken 列表）**去链接化**：替换成带标记的纯文本，
+ * 不再渲染为可点链接，也不进编号 / references 列表。
+ *
+ * 为什么需要：system prompt 已禁止编造来源，但模型（尤其 agent 类）仍可能违规凭空写出
+ * `[[wiki/sources/xxx]]`——或问题主题压根不在当前 workspace。validateAnswerRefs 已能检出这些
+ * 路径（broken），但检出只是「软提示」；这里在**渲染层硬执行**：假来源一律不可点，杜绝点开即 404。
+ *
+ * @param brokenPaths 归一化后的路径集合（与 parseWikiRef().path 同口径，含 .md）
+ */
+export function neutralizeBrokenRefs(
+  text: string,
+  brokenPaths: Set<string>,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  if (brokenPaths.size === 0) return text;
+  const norm = normalizeBareSlugRefs(text);
+  const re = new RegExp(WIKI_REF_RE.source, "g");
+  const marker = t("ref.no_source", locale);
+  return norm.replace(re, (full, target: string, anchor?: string, alias?: string) => {
+    const ref = parseWikiRef(target, anchor, alias);
+    if (brokenPaths.has(ref.path)) {
+      // 去掉 [ ] 防破坏 markdown；不输出链接语法 → ReactMarkdown 渲染为纯文本
+      const display = refDisplayText(ref).replace(/[[\]]/g, "");
+      return `${display}〔⚠ ${marker}〕`;
     }
     return full;
   });

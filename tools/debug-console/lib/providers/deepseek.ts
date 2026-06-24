@@ -31,7 +31,13 @@ export class DeepSeekProvider implements Provider {
       apiKey: process.env.DEEPSEEK_API_KEY!,
       baseURL: "https://api.deepseek.com",
     });
-    yield* streamOpenAI(client, input, getOpenAITools());
+    // 默认关闭思考模式：deepseek-v4-flash / v4-pro 默认会返回 reasoning_content（思维链），
+    // 传 thinking:{type:"disabled"} 让它像普通对话模型直接出 content，响应更快、省 token，
+    // 且 function calling 照常工作（已 curl 实测验证）。thinking 是 DeepSeek 专有字段，
+    // 仅在此传入、不进共享的 streamOpenAI 默认值，避免污染 OpenAI/Qwen 等其他 provider。
+    yield* streamOpenAI(client, input, getOpenAITools(), {
+      thinking: { type: "disabled" },
+    });
   }
 }
 

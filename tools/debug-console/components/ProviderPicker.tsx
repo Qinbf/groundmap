@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n-client";
 
 export interface ProviderInfo {
   id: string;
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function ProviderPicker({ provider, model, onChange }: Props) {
+  const t = useT();
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,8 +47,10 @@ export function ProviderPicker({ provider, model, onChange }: Props) {
   if (loading) {
     return (
       <div className="flex flex-col gap-1">
-        <span className="k-eyebrow">provider</span>
-        <span className="text-[11px] text-[var(--paper-mute)]">loading…</span>
+        <span className="k-eyebrow">{t("picker.provider")}</span>
+        <span className="text-[11px] text-[var(--paper-mute)]">
+          {t("picker.loading")}
+        </span>
       </div>
     );
   }
@@ -54,7 +58,7 @@ export function ProviderPicker({ provider, model, onChange }: Props) {
   return (
     <div className="flex items-end gap-4">
       <div className="flex flex-col gap-1">
-        <span className="k-eyebrow">provider</span>
+        <span className="k-eyebrow">{t("picker.provider")}</span>
         <select
           value={provider}
           onChange={(e) => {
@@ -73,20 +77,20 @@ export function ProviderPicker({ provider, model, onChange }: Props) {
               style={{ background: "var(--ink-2)", color: "var(--paper)" }}
             >
               {p.name}
-              {!p.available ? " (n/a)" : ""}
-              {p.is_agent ? " · agent" : ""}
+              {!p.available ? t("picker.na") : ""}
+              {p.is_agent ? t("picker.agent") : ""}
             </option>
           ))}
         </select>
         {current && !current.available && (
           <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--vermilion)]">
-            {current.unavailable_reason || "unavailable"}
+            {current.unavailable_reason || t("picker.unavailable")}
           </span>
         )}
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="k-eyebrow">model</span>
+        <span className="k-eyebrow">{t("picker.model")}</span>
         <select
           value={model}
           onChange={(e) => onChange(provider, e.target.value)}

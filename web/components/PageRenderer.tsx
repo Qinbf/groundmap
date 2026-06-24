@@ -2,7 +2,7 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useMemo } from "react";
-import { preprocessWikiLinks, parseKbLink } from "@/lib/markdown-render";
+import { preprocessWikiLinks, parseKbLink, extractCodeBlockAnchor } from "@/lib/markdown-render";
 import {
   AnchorRegistryContext,
   ANCHOR_COMPONENTS,
@@ -110,13 +110,17 @@ const COMPONENTS: Components = {
     }
 
     // fenced code block 内的 <code>：让 pre 提供背景，code 自己只负责字色，
-    // 强制透明背景 + 0 padding 防止 typography / 其它来源的样式渗入
+    // 强制透明背景 + 0 padding 防止 typography / 其它来源的样式渗入。
+    // 末行若是下沉的代码块锚点（^c-...，见 relocateCodeFenceAnchors），抽成 id 让
+    // [[raw/...#^c-...]] 引用能 HashScroller 跳转，并从可见代码里剥掉锚点噪音。
+    const { display, id } = extractCodeBlockAnchor(childText);
     return (
       <code
+        id={id}
         className={`${className ?? ""} !bg-transparent !p-0 !text-zinc-100`}
         {...props}
       >
-        {children}
+        {display}
       </code>
     );
   },

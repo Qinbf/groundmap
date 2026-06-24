@@ -90,3 +90,55 @@
     background-color: hsl(var(--muted-foreground) / 0.6);
   }
 }
+
+/**
+ * 锚点跳转落地高亮：点引用跳到源页对应段落/表格后，HashScroller 给目标块加
+ * .kb-hash-highlight，一段琥珀色高亮先保持后渐隐（约 2.6s），提示用户「就是这一段」。
+ * 用琥珀色与全站 raw 引用强调色一致（引用来自 raw 源页）。box-shadow 充当外圈，
+ * 让整张表格 / 整段都被框住；background 兜底文本块。
+ */
+@keyframes kb-hash-flash {
+  0%,
+  60% {
+    background-color: rgba(251, 191, 36, 0.32);
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.32);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0);
+  }
+}
+.kb-hash-highlight {
+  border-radius: 6px;
+  animation: kb-hash-flash 2.6s ease-out forwards;
+}
+
+/* 多块连片高亮（标题 + 其下正文）：只渐隐背景、不给每段套外圈，避免段间出现一圈圈边框。 */
+@keyframes kb-hash-flash-bg {
+  0%,
+  60% {
+    background-color: rgba(251, 191, 36, 0.32);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.kb-hash-highlight-region {
+  border-radius: 6px;
+  animation: kb-hash-flash-bg 2.6s ease-out forwards;
+}
+
+/* 尊重「减少动态效果」偏好：不做动画，改为静态高亮，由 JS 定时移除 class。 */
+@media (prefers-reduced-motion: reduce) {
+  .kb-hash-highlight {
+    animation: none;
+    border-radius: 6px;
+    background-color: rgba(251, 191, 36, 0.28);
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.28);
+  }
+  .kb-hash-highlight-region {
+    animation: none;
+    border-radius: 6px;
+    background-color: rgba(251, 191, 36, 0.28);
+  }
+}

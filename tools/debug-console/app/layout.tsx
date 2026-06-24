@@ -1,6 +1,9 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Fraunces, JetBrains_Mono } from "next/font/google";
+import { t } from "@/lib/i18n";
+import { getServerLocale } from "@/lib/server-locale";
+import { LocaleProvider } from "@/lib/i18n-client";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -16,19 +19,22 @@ const jbMono = JetBrains_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Knowledge.Console — KB Debug Workbench",
-  description:
-    "Editorial terminal for a markdown + Git knowledge base. Inspect agent reasoning, tool calls, and provenance live.",
-};
+export function generateMetadata(): Metadata {
+  const locale = getServerLocale();
+  return {
+    title: t("meta.title", locale),
+    description: t("meta.description", locale),
+  };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = getServerLocale();
   return (
-    <html lang="zh" className={`${fraunces.variable} ${jbMono.variable}`}>
+    <html lang={locale} className={`${fraunces.variable} ${jbMono.variable}`}>
       <body>
         <div className="grain" aria-hidden />
         <div className="scanlines" aria-hidden />
-        {children}
+        <LocaleProvider initial={locale}>{children}</LocaleProvider>
       </body>
     </html>
   );

@@ -33,7 +33,7 @@
 
 ### 你做的事
 
-> **路径约定**：数据按主题隔离在 `workspaces/<name>/` 下，本文所有 `raw/` / `wiki/` 均指**当前 workspace 内**的目录（默认 `smb-ecommerce`，即 `workspaces/smb-ecommerce/raw/...`）。`scripts/k.py` 的路径参数是 **workspace 相对**的（写 `raw/papers/foo.md` 即可，不要写全 `workspaces/.../raw/...`）；`scripts/convert.py` 不传 `--dir` 时按 `--workspace` 自动扫 `workspaces/<name>/raw/`；`--dir` 是显式扫描目录，按运行命令时所在目录解析（通常在仓库根运行，即写**仓库相对**路径，如 `--dir workspaces/smb-ecommerce/raw/articles`），且必须位于数据根内。切换 workspace 用 `--workspace <name>` / `KB_WORKSPACE=<name>`。
+> **路径约定**：数据按主题隔离在 `workspaces/<name>/` 下，本文所有 `raw/` / `wiki/` 均指**当前 workspace 内**的目录（默认 `my-research`，即 `workspaces/my-research/raw/...`）。`scripts/k.py` 的路径参数是 **workspace 相对**的（写 `raw/papers/foo.md` 即可，不要写全 `workspaces/.../raw/...`）；`scripts/convert.py` 不传 `--dir` 时按 `--workspace` 自动扫 `workspaces/<name>/raw/`；`--dir` 是显式扫描目录，按运行命令时所在目录解析（通常在仓库根运行，即写**仓库相对**路径，如 `--dir workspaces/my-research/raw/articles`），且必须位于数据根内。切换 workspace 用 `--workspace <name>` / `KB_WORKSPACE=<name>`。
 
 把任意支持的格式拖到当前 workspace 的 `raw/` 对应子目录：
 
@@ -71,12 +71,12 @@ workspaces/<name>/raw/
 ### 调用方式
 
 ```bash
-python scripts/convert.py                            # 增量：扫默认 workspace 的 raw/（即 workspaces/smb-ecommerce/raw/）
-python scripts/convert.py --workspace rag-evolution  # 指定 workspace
+python scripts/convert.py                            # 增量：扫默认 workspace 的 raw/（即 workspaces/my-research/raw/）
+python scripts/convert.py --workspace my-research  # 指定 workspace
 python scripts/convert.py --dry-run                  # 只列出待处理文件
 python scripts/convert.py --force                    # 全部重转
 python scripts/convert.py --ext .pdf                 # 只转 pdf
-python scripts/convert.py --dir workspaces/smb-ecommerce/wiki/   # 显式指定目录（如给 wiki 页面加锚点）
+python scripts/convert.py --dir workspaces/my-research/wiki/   # 显式指定目录（如给 wiki 页面加锚点）
 ```
 
 > `--dir` 给出时 `--workspace` 被忽略；目录按运行命令时所在位置解析（通常在仓库根运行，写 `workspaces/<name>/...` 这样的仓库相对路径），且必须在数据根内。
@@ -372,26 +372,26 @@ git commit -m "ingest: Vaswani et al. 2017 - Attention Is All You Need"
 
 ## 6. 完整真实例子：Sheng Lu《Shein Lost Market Share in the U.S. ...》
 
-下面用一个**真实落在本仓库默认 workspace（`workspaces/smb-ecommerce/`）**的例子走一遍：Sheng Lu（特拉华大学）2026-02 的博客文章《Shein Lost Market Share in the U.S. Apparel Retail Market in 2025 Amid Trade Tensions》。除 `raw/` 本身（被 `.gitignore` 排除、只存在于本地）外，最终产物都能在仓库里看到。
+下面用一个**真实落在本仓库默认 workspace（`workspaces/my-research/`）**的例子走一遍：Sheng Lu（特拉华大学）2026-02 的博客文章《Shein Lost Market Share in the U.S. Apparel Retail Market in 2025 Amid Trade Tensions》。除 `raw/` 本身（被 `.gitignore` 排除、只存在于本地）外，最终产物都能在仓库里看到。
 
 ### 6.1 起点：原始文件入库
 
 ```bash
 # 把下载好的网页 HTML 放进当前 workspace 的 raw/articles/
 cp ~/Downloads/shein_us_market_share_2025.html \
-   workspaces/smb-ecommerce/raw/articles/shein_us_market_share_2025.html
+   workspaces/my-research/raw/articles/shein_us_market_share_2025.html
 ```
 
 ### 6.2 跑 convert
 
 ```bash
-python scripts/convert.py        # 默认 workspace = smb-ecommerce
+python scripts/convert.py        # 默认 workspace = my-research
 ```
 
 输出：
 
 ```
-扫描目录: <project-root>/workspaces/smb-ecommerce/raw
+扫描目录: <project-root>/workspaces/my-research/raw
 待转换: 1 | 已是最新: 26
 
   转换: articles/shein_us_market_share_2025.html ... 完成 -> shein_us_market_share_2025.md (新增, 92466 字符, 23 章节, 193 段)
@@ -506,7 +506,7 @@ tags:
 - 每条实质性论断后都跟着 `[[raw/articles/shein_us_market_share_2025#^p-...]]` 块级引用
 - 「## AI 综合判断」H2 节固化核心价值 / 关联 / 冲突三个 H3——本例的「冲突」节记录了与 `wiki/sources/analyzify_shein_stats_2025`（SHEIN 全球销售 +40-45%）的口径差异及收口结论（美国局部下滑 vs 全球扩张，两口径并存）
 - 横向出链 `[[wiki/entities/shein]]` `[[wiki/concepts/de_minimis_exemption]]`——让节点页与来源页双向连通
-- 自身的段落锚点 `^h-1-1-...` `^p-1-...` 由 `convert.py --dir workspaces/smb-ecommerce/wiki/` 自动加上
+- 自身的段落锚点 `^h-1-1-...` `^p-1-...` 由 `convert.py --dir workspaces/my-research/wiki/` 自动加上
 
 ### 6.7 更新核心节点
 
@@ -550,7 +550,7 @@ tags:
 
 ### 6.9 写 log + commit
 
-本例实际是作为 demo 数据集批量 ingest 的一部分入库的，对应 `workspaces/smb-ecommerce/log.md` 的「[2026-05-20] ingest | 跨境电商 demo 数据集」条目。若单独 ingest 一篇，log 条目与 commit 形如：
+本例实际是作为 demo 数据集批量 ingest 的一部分入库的，对应 `workspaces/my-research/log.md` 的「[2026-05-20] ingest | 跨境电商 demo 数据集」条目。若单独 ingest 一篇，log 条目与 commit 形如：
 
 ```bash
 # log.md 追加：
@@ -561,12 +561,12 @@ tags:
 - wiki/entities/temu.md 保持 #to-be-updated（缺专门来源）
 
 # 一次性 commit（git 在仓库根运行；raw/ 被 .gitignore 排除，不进提交）：
-git add workspaces/smb-ecommerce/wiki/sources/shein_us_market_share_2025.md
-git add workspaces/smb-ecommerce/wiki/entities/shein.md
-git add workspaces/smb-ecommerce/wiki/concepts/de_minimis_exemption.md
-git add workspaces/smb-ecommerce/wiki/concepts/fast_fashion.md
-git add workspaces/smb-ecommerce/wiki/indexes/platforms_index.md
-git add workspaces/smb-ecommerce/log.md
+git add workspaces/my-research/wiki/sources/shein_us_market_share_2025.md
+git add workspaces/my-research/wiki/entities/shein.md
+git add workspaces/my-research/wiki/concepts/de_minimis_exemption.md
+git add workspaces/my-research/wiki/concepts/fast_fashion.md
+git add workspaces/my-research/wiki/indexes/platforms_index.md
+git add workspaces/my-research/log.md
 git commit -m "ingest: Shein 美国市场份额 2025（Sheng Lu / Euromonitor）"
 ```
 
@@ -601,7 +601,7 @@ python scripts/k.py health
 | 现象 | 可能原因 | 处理 |
 |---|---|---|
 | `convert.py` 报"转换结果为空" | markitdown 不识别（如扫描版 PDF） | 手动转 OCR；或换 `pdfplumber` / `pymupdf` 预处理 |
-| outline.json 与 md 不同步 | 手改了 md 但没重跑 convert | `python scripts/convert.py --force`（整个 workspace 的 raw/）或 `--force --dir workspaces/smb-ecommerce/raw/papers` 只重转一处 |
+| outline.json 与 md 不同步 | 手改了 md 但没重跑 convert | `python scripts/convert.py --force`（整个 workspace 的 raw/）或 `--force --dir workspaces/my-research/raw/papers` 只重转一处 |
 | `k.py list-broken-refs` 报失效 | 原文内容微调导致 hash 变 | 手动改 wiki 引用为新 anchor，或在原文恢复变更 |
 | 摘要页里有 `[需要来源]` | 写时找不到精确出处 | lint 流程逐条补 anchor，或把论断降级为 `confidence: low` |
 | 同 hash 撞车导致 `-2` 后缀 | 文档内有完全重复的段落 | 不影响使用；`postprocess.py` 的 `make_unique()`（`add_anchors` 内部）自动加序号保唯一 |

@@ -3,8 +3,6 @@
  */
 import type { Provider, ProviderId, ProviderInfo } from "./types";
 import { makeDeepSeekProvider } from "./deepseek";
-import { makeAnthropicProvider } from "./anthropic";
-import { makeOpenAIProvider } from "./openai";
 import { makeClaudeCodeProvider } from "./claude-code";
 import { makeCodexProvider } from "./codex";
 
@@ -14,8 +12,6 @@ function registry(): Map<ProviderId, Provider> {
   if (!_registry) {
     _registry = new Map<ProviderId, Provider>([
       ["deepseek", makeDeepSeekProvider()],
-      ["anthropic", makeAnthropicProvider()],
-      ["openai", makeOpenAIProvider()],
       ["claude-code", makeClaudeCodeProvider()],
       ["codex", makeCodexProvider()],
     ]);

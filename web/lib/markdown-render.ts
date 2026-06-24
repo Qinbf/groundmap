@@ -11,7 +11,10 @@
  *
  * 渲染端用 href 前缀 "kb://" 识别为 wiki 内部链接；?rel= query 由 WikiLink 解析渲染徽章。
  */
-import { WIKILINK_RE, RELATION_TYPES, normalizeLinkTarget, splitAliasOrRelation, type RelationType } from "./markdown";
+// 用显式 .ts 后缀（tsconfig 已开 allowImportingTsExtensions + moduleResolution:bundler）：
+// 让 markdown.ts 这层依赖能被 Node 内置 node:test runner 解析，从而 parseKbLink 可单测
+// （markdown-render.test.ts）。webpack / Next 构建对显式 .ts 后缀解析无碍。
+import { WIKILINK_RE, RELATION_TYPES, normalizeLinkTarget, splitAliasOrRelation, type RelationType } from "./markdown.ts";
 
 export const KB_LINK_PREFIX = "kb://";
 
@@ -30,8 +33,85 @@ export function stripDanglingAnchorLines(content: string): string {
   return content.replace(DANGLING_ANCHOR_LINE_RE, "");
 }
 
+// 表格行末尾、跟在「最后一个 `|` 之后」的块锚点。convert.py 把 ` ^{anchor}` 一律追加到
+// 块的行尾；对表格行而言行尾本是闭合 `|`，于是锚点落到了最后一个竖线之外。
+//   group1 = `| c1 | c2 | c3 `（贪婪吃到最后一个 `|` 之前），group2 = 锚点（含 `^`）
+// 末尾 \r? 兼容 CRLF：JS 多行 `$` 匹配 \n 前的位置，`.`/`[ \t]` 都不含 \r，
+// 不显式吃掉 \r 则 CRLF 文档里整行匹配失败（锚点修复对 Windows 行尾的文件失效）。
+const TABLE_ROW_TRAILING_ANCHOR_RE = new RegExp(
+  String.raw`^([ \t]*\|.*)\|[ \t]*(${ANCHOR_TOKEN})[ \t]*\r?$`,
+  "gm",
+);
+
+/**
+ * 把「跟在表格行最后一个 `|` 之后」的块锚点搬进最后一个真实单元格内。
+ *
+ * 为什么必须搬：GFM 规范规定「行内单元格数超过表头列数时，多余单元格被丢弃」。
+ * convert.py 产出的表格行形如 `| c1 | c2 | c3 | ^t-19-ecbd68`——锚点成了第 4 个
+ * （多余）单元格，被 remark-gfm 直接丢掉，于是这张表的任何元素都拿不到 `id`，
+ * `[[raw/...#^t-19-...]]` 引用点过去时 HashScroller 的 getElementById 永远 miss、不滚动。
+ *
+ * 搬进最后一个单元格后变成 `| c1 | c2 | c3 ^t-19-ecbd68 |`：锚点成为最后一格文本的
+ * 尾巴，由 AnchoredTableCell 经 extractTrailingAnchor 抽成 `<td id="t-19-ecbd68">`、
+ * 并从可见文本里剥掉。纯显示层修复，不动 raw/wiki 数据，覆盖所有已转换文件、无需重转。
+ *
+ * 只匹配以 `|` 起头的行（表格行），普通段落 / 标题的行末锚点（不在 `|` 之后）不受影响；
+ * 已正确落在单元格内的锚点（行以 `|` 收尾）因尾部不是行末锚点也不会被改写。
+ */
+export function relocateTableRowAnchors(content: string): string {
+  return content.replace(TABLE_ROW_TRAILING_ANCHOR_RE, "$1$2 |");
+}
+
+// 代码块锚点 token（仅 ^c-）——只有围栏代码块的锚点会落到闭合栅栏行上。
+const CODE_ANCHOR_TOKEN = String.raw`\^c-\d+(?:-\d+)?-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?`;
+// 闭合围栏行尾、跟在 ``` / ~~~ 之后的代码块锚点。`\x60` = 反引号（在 String.raw 模板里
+// 直接写反引号会终止模板，故用 \x60）。group1 = 缩进，group2 = 围栏，group3 = 锚点。
+const CODE_FENCE_TRAILING_ANCHOR_RE = new RegExp(
+  String.raw`^([ \t]*)(\x60{3,}|~{3,})[ \t]+(${CODE_ANCHOR_TOKEN})[ \t]*\r?$`,
+  "gm",
+);
+
+/**
+ * 把「跟在闭合代码栅栏之后」的锚点下沉为代码块的最后一行内容。
+ *
+ * 为什么必须搬：CommonMark 规定闭合栅栏 ``` 之后只能跟空白。convert.py 产出的
+ * ` ``` ^c-14-03a7d0` 让闭合栅栏后带了非空白 → 这行不再是合法闭合栅栏 → 代码块不闭合，
+ * 把锚点行连同后续正文一起吞进代码块（实测会吞掉紧随的段落）。
+ *
+ * 下沉成「锚点独占一行 + 干净闭合栅栏」后：栅栏正常闭合、后续正文幸存；锚点成为代码块
+ * 最后一行文本，由 PageRenderer 的 code 组件经 extractCodeBlockAnchor 抽成 `<code id=...>`
+ * 并从可见代码里剥掉。纯显示层修复，覆盖所有已转换文件、并对未来新转换的文件同样生效。
+ */
+export function relocateCodeFenceAnchors(content: string): string {
+  return content.replace(CODE_FENCE_TRAILING_ANCHOR_RE, "$1$3\n$1$2");
+}
+
+// 代码块最后一行的下沉锚点（relocateCodeFenceAnchors 产物）。匹配末行 ^c- 锚点。
+const CODE_BLOCK_TRAILING_ANCHOR_RE = new RegExp(
+  String.raw`(?:^|\r?\n)[ \t]*(${CODE_ANCHOR_TOKEN})[ \t]*\r?\n?$`,
+);
+
+/**
+ * 从代码块文本里抽出末行的下沉锚点：返回剥掉锚点后的可见代码 + 锚点 id（不带 ^）。
+ * 无锚点时原样返回。供 PageRenderer 的 code 组件给 `<code>` 赋 id（HashScroller 跳转用）。
+ */
+export function extractCodeBlockAnchor(text: string): { display: string; id?: string } {
+  const m = text.match(CODE_BLOCK_TRAILING_ANCHOR_RE);
+  if (!m || m.index === undefined) return { display: text };
+  return { display: text.slice(0, m.index), id: m[1].replace(/^\^/, "") };
+}
+
+/**
+ * 块级锚点归一化：把表格 / 代码块那些「落在结构分隔符之外、会被 GFM 丢弃或吞内容」的锚点
+ * 搬回能被组件层抽成 HTML id 的位置。渲染边界统一调用（PageRenderer 经 preprocessWikiLinks、
+ * MiniMarkdown 直接调），对已有与未来新建知识库一致生效，不改 raw/wiki 数据本身。
+ */
+export function normalizeBlockAnchors(content: string): string {
+  return relocateCodeFenceAnchors(relocateTableRowAnchors(stripDanglingAnchorLines(content)));
+}
+
 export function preprocessWikiLinks(content: string): string {
-  return stripDanglingAnchorLines(content).replace(
+  return normalizeBlockAnchors(content).replace(
     WIKILINK_RE,
     (_match: string, target: string, anchor?: string, third?: string) => {
       const normalized = normalizeLinkTarget(target);
@@ -64,10 +144,15 @@ export function stripLeadingH1(content: string): string {
 }
 
 /** 解析 kb:// 链接为 (target, anchor, relation)。
- *  注意：浏览器把 href 中的 `^` 自动编码成 `%5E`（因 `^` 不在 RFC 3986 的
- *  unreserved 字符里），所以拿到 fragment 后必须 decodeURIComponent 还原，
- *  否则下游的 anchor 解析会失败（`replace(/^\^/, "")` 不匹配 `%5E` 开头），
- *  最终 API 把 anchor 当无效退回整篇 readFile，导致 hover 预览显示全文。
+ *  注意：react-markdown 渲染 `[text](href)` 时会按 RFC 3986 归一化 href——
+ *  把非 ASCII 字符（如中文文件名 `前6期选题`）percent-encode，`^` 也编码成 `%5E`。
+ *  所以 target 与 anchor 拿到时都可能是 encoded 形式，**两者都必须 decodeURIComponent
+ *  还原**：
+ *    - anchor 不还原 → `replace(/^\^/, "")` 不匹配 `%5E` 开头，API 把 anchor 当无效
+ *      退回整篇 readFile，hover 预览显示全文。
+ *    - target 不还原 → WikiLink 把 `raw/notes/%E5%89%8D...` 原样显示在 popover 头部
+ *      （中文变乱码），且 refNum 注册表用干净中文建键、查表用 encoded 形式 → 必然 miss，
+ *      中文名 raw 文件的论文式 [n] 上标全部失效。
  *
  *  query 段 `?rel=SUPPORTS` 由 preprocessWikiLinks 写入；这里取出还原为
  *  RelationType，由 WikiLink 组件渲染徽章。
@@ -93,7 +178,13 @@ export function parseKbLink(href: string): {
     }
   }
   const queryIdx = beforeHash.indexOf("?");
-  const target = queryIdx === -1 ? beforeHash : beforeHash.slice(0, queryIdx);
+  const rawTarget = queryIdx === -1 ? beforeHash : beforeHash.slice(0, queryIdx);
+  let target: string;
+  try {
+    target = decodeURIComponent(rawTarget);
+  } catch {
+    target = rawTarget;
+  }
   let relation: RelationType | null = null;
   if (queryIdx !== -1) {
     const queryStr = beforeHash.slice(queryIdx + 1);

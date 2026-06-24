@@ -3,7 +3,7 @@
  *
  * 请求体：
  *   {
- *     provider: 'deepseek' | 'anthropic' | 'openai' | 'claude-code' | 'codex',
+ *     provider: 'deepseek' | 'claude-code' | 'codex',
  *     model: string,
  *     system?: string,
  *     messages: ChatMessage[],   // 完整历史，包括最新的 user 消息
@@ -19,7 +19,7 @@ import type { ProviderId } from "@/lib/providers/types";
 import { runAgent } from "@/lib/agent-loop";
 import { sseLine } from "@/lib/sse";
 import { DEFAULT_SYSTEM_PROMPT } from "@/lib/default-system-prompt";
-import { executeTool } from "@/lib/kb-http-client";
+import { executeTool, workspaceContext } from "@/lib/kb-http-client";
 
 /**
  * 预热：root_index 内存缓存（5 分钟 TTL）。
@@ -27,19 +27,21 @@ import { executeTool } from "@/lib/kb-http-client";
  * 用户改了 root_index 后最迟 5 分钟生效——可接受（root_index 改动很少）。
  */
 const ROOT_INDEX_TTL_MS = 5 * 60 * 1000;
-let rootIndexCache: { content: string; expiresAt: number } | null = null;
+// 按 workspace 分桶缓存——否则切库后会把上一个库的 root_index 串给新库。
+const rootIndexCache = new Map<string, { content: string; expiresAt: number }>();
 
-async function getRootIndexContent(): Promise<string> {
+async function getRootIndexContent(workspace: string | undefined): Promise<string> {
+  const key = workspace ?? "__default__";
   const now = Date.now();
-  if (rootIndexCache && rootIndexCache.expiresAt > now) {
-    return rootIndexCache.content;
-  }
+  const cached = rootIndexCache.get(key);
+  if (cached && cached.expiresAt > now) return cached.content;
   try {
+    // executeTool 从 workspaceContext 读 ws（本函数在 run(ws) 作用域内被调）
     const r = await executeTool("read_page", { path: "wiki/root_index.md" });
     if (!r.ok || !r.data) return "";
     const d = r.data as { content?: string };
     const content = d.content || "";
-    rootIndexCache = { content, expiresAt: now + ROOT_INDEX_TTL_MS };
+    rootIndexCache.set(key, { content, expiresAt: now + ROOT_INDEX_TTL_MS });
     return content;
   } catch {
     return "";
@@ -87,12 +89,14 @@ const ChatMessageSchema = z.object({
 });
 
 const RequestSchema = z.object({
-  provider: z.enum(["deepseek", "anthropic", "openai", "claude-code", "codex"]),
+  provider: z.enum(["deepseek", "claude-code", "codex"]),
   model: z.string().min(1),
   system: z.string().optional(),
   messages: z.array(ChatMessageSchema).min(1).max(50),
   tool_budget: z.number().int().min(1).max(50).optional(),
   mode: z.enum(["quick", "audit", "explore", "devil"]).optional(),
+  // 「自动识别」用：要查的 workspace；空则 web 回退默认。合法性由 web 的 resolveWorkspace 兜底校验。
+  workspace: z.string().regex(/^[A-Za-z0-9_-]+$/).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -111,7 +115,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { provider: providerId, model, system, messages, tool_budget, mode } = parsed.data;
+  const { provider: providerId, model, system, messages, tool_budget, mode, workspace } =
+    parsed.data;
   const provider = getProvider(providerId as ProviderId);
   if (!provider) {
     return NextResponse.json({ error: "unknown_provider" }, { status: 400 });
@@ -141,40 +146,44 @@ export async function POST(req: NextRequest) {
           closed = true;
         }
       };
-      try {
-        const baseSystem = system || DEFAULT_SYSTEM_PROMPT;
-        const indexContent = await getRootIndexContent();
-        const augmentedSystem = appendPrewarmedIndex(baseSystem, indexContent);
-
-        for await (const evt of runAgent({
-          provider,
-          model,
-          system: augmentedSystem,
-          messages,
-          toolBudget: tool_budget,
-          mode,
-          signal: abortController.signal,
-        })) {
-          if (abortController.signal.aborted) break;
-          safeEnqueue(sseLine(evt));
-        }
-        safeEnqueue(sseLine({ kind: "stream-end" }));
-      } catch (e) {
-        safeEnqueue(
-          sseLine({
-            kind: "turn-end",
-            reason: "error",
-            error_message: e instanceof Error ? e.message : String(e),
-          }),
-        );
-      } finally {
-        closed = true;
+      // 整段逻辑跑在 workspaceContext 作用域内：root_index 预热 + runAgent 深处的所有
+      // executeTool 都会读到 workspace，并在调 web 时带上 kb_workspace cookie。
+      await workspaceContext.run(workspace, async () => {
         try {
-          controller.close();
-        } catch {
-          /* 已关闭 */
+          const baseSystem = system || DEFAULT_SYSTEM_PROMPT;
+          const indexContent = await getRootIndexContent(workspace);
+          const augmentedSystem = appendPrewarmedIndex(baseSystem, indexContent);
+
+          for await (const evt of runAgent({
+            provider,
+            model,
+            system: augmentedSystem,
+            messages,
+            toolBudget: tool_budget,
+            mode,
+            signal: abortController.signal,
+          })) {
+            if (abortController.signal.aborted) break;
+            safeEnqueue(sseLine(evt));
+          }
+          safeEnqueue(sseLine({ kind: "stream-end" }));
+        } catch (e) {
+          safeEnqueue(
+            sseLine({
+              kind: "turn-end",
+              reason: "error",
+              error_message: e instanceof Error ? e.message : String(e),
+            }),
+          );
+        } finally {
+          closed = true;
+          try {
+            controller.close();
+          } catch {
+            /* 已关闭 */
+          }
         }
-      }
+      });
     },
     cancel() {
       // 客户端拉断 stream（fetch abort）→ 转发到 agent-loop

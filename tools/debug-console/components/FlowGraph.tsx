@@ -29,6 +29,7 @@ import {
   type GraphNode,
 } from "@/lib/build-flow-graph";
 import { FlowNode } from "./FlowNode";
+import { useLocale, useT } from "@/lib/i18n-client";
 
 const nodeTypes = { kbcard: FlowNode } as const;
 
@@ -41,8 +42,10 @@ interface Props {
 }
 
 function FlowGraphInner({ message, userQuery, onOpenRef, onOpenNode, streaming }: Props) {
+  const t = useT();
+  const { locale } = useLocale();
   const { nodes, edges, latestActive } = useMemo(() => {
-    const built = buildFlowGraph(message, userQuery);
+    const built = buildFlowGraph(message, userQuery, locale);
     const positioned = layoutGraph(built.nodes, built.edges, "LR");
     const toolNodes = positioned.filter(
       (n) => n.data.kind === "file" || n.data.kind === "search" || n.data.kind === "list",
@@ -58,7 +61,7 @@ function FlowGraphInner({ message, userQuery, onOpenRef, onOpenNode, streaming }
       },
     }));
     return { nodes: enriched, edges: built.edges, latestActive: latest };
-  }, [message, userQuery, onOpenRef, streaming]);
+  }, [message, userQuery, onOpenRef, streaming, locale]);
 
   const rf = useReactFlow();
 
@@ -73,7 +76,7 @@ function FlowGraphInner({ message, userQuery, onOpenRef, onOpenNode, streaming }
   if (nodes.length === 0) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--ink)] text-sm text-[var(--paper-mute)]">
-        发送一条消息后这里会出现流程图
+        {t("flow.graph_empty")}
       </div>
     );
   }
@@ -133,7 +136,7 @@ function FlowGraphInner({ message, userQuery, onOpenRef, onOpenNode, streaming }
 
       {streaming && (
         <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 border border-[var(--amber)]/60 bg-[var(--ink-2)]/90 px-4 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--amber)] shadow-lg backdrop-blur">
-          <span className="mr-2">reasoning…</span>
+          <span className="mr-2">{t("flow.reasoning")}</span>
           <span className="thinking-dot" />
           <span className="thinking-dot" />
           <span className="thinking-dot" />

@@ -716,6 +716,189 @@ def list_relation_issues(pages) -> list[dict]:
     return out
 
 
+# ========== 关系词频次失衡扫描（list-relation-balance） ==========
+# 扫全库 wiki 页：单一关系词（如 ALTERNATIVE_TO）出现频次 / 总关系词数 > threshold
+# → 报警（防 LLM 在不确定时偷懒用最弱关系词）
+# 与 list-relation-issues 正交：后者查"拼写错 / 非标准词"，本 lint 查"频次失衡"。
+
+def list_relation_balance(pages, *, min_total: int = 5, threshold: float = 0.30) -> list[dict]:
+    """扫全库 wikilinks：单一关系词频次 / 总关系引用 > threshold 则报警。
+
+    Args:
+      min_total: 关系词总数 < 此值不报警（避免小样本噪声；5 个关系词以下说明 wiki
+                 还在早期，单一关系词主导是正常起步阶段，不是失衡）
+      threshold: 单关系词占比阈值（默认 0.30 = 30%）
+
+    不计入：归档区（_is_exempt）、代码块（mask_code_spans）。
+    只算 7 个白名单关系词（RELATION_TYPES）；非标准词由 list-relation-issues 报。
+    """
+    from collections import Counter
+    counts: Counter = Counter()
+    for page in pages:
+        if _is_exempt(page):
+            continue
+        scan_text = mask_code_spans(page.raw_content)
+        for m in WIKILINK_RE.finditer(scan_text):
+            _, relation = split_alias_or_relation(m.group(3))
+            if relation:
+                counts[relation] += 1
+    total = sum(counts.values())
+    if total <= min_total:
+        return []
+    out = []
+    for relation, n in counts.most_common():
+        ratio = n / total
+        if ratio > threshold:
+            out.append({
+                "relation": relation,
+                "count": n,
+                "ratio": round(ratio, 4),
+                "threshold": threshold,
+                "total_relations": total,
+                "suggestion": _relation_balance_suggestion(relation, ratio),
+            })
+    return out
+
+
+def _relation_balance_suggestion(relation: str, ratio: float) -> str:
+    """对每个超阈值关系词给具体到「可能偷懒」的方向，避免笼统说『复查』。
+
+    落到 7 个关系词各自的语义边界（与 .claude/skills/kb-ingest/SKILL.md
+    「关系词决策树」对齐）。"""
+    suggestions = {
+        "ALTERNATIVE_TO":
+            "占比偏高：很多『与 X 类似 / 同期工作 / 对照』被错标为 ALTERNATIVE_TO；"
+            "考虑改为 EXTENDS（同源增量）或 SUPPORTS（同方向佐证）",
+        "PART_OF":
+            "占比偏高：很多『相关于 / 涉及 / 在 X 主题下』被错标为 PART_OF；"
+            "PART_OF 应是 A 没 B 不成立（强组成关系）；其他用 EXTENDS / CITES",
+        "EXTENDS":
+            "占比偏高：把『对照 / 同期工作』错标为 EXTENDS；"
+            "EXTENDS 应是 A 在 B 基础上做增量（同团队 / 直接引 B 的方法）",
+        "SUPPORTS":
+            "占比偏高：把『也讨论了类似主题 / 印证』错标为 SUPPORTS；"
+            "SUPPORTS 应是 A 提供 B 论断的直接证据（数据 / 定理 / 实验）",
+        "REFUTES":
+            "占比偏高：把『批评 / 不完全同意』错标为 REFUTES；"
+            "REFUTES 应是 A 直接反证 B 的核心论断（不是细节修正）",
+        "IS_A":
+            "占比偏高：把『相关概念』错标为 IS_A；"
+            "IS_A 应是严格 taxonomy（X 是一种 Y、满足 Y 的所有必要条件）",
+        "CITES":
+            "占比偏高：把默认 REFERENCES（[[X]] plain）改为 CITES 应是作者"
+            "显式做了文献引用的场景；很多标注其实该走默认 REFERENCES",
+    }
+    return suggestions.get(
+        relation,
+        f"占比 {ratio:.0%} 偏高：复查这些 [[?|{relation}]] 是否真的符合该关系语义",
+    )
+
+
+# ========== 隐含关系扫描（list-implicit-relations） ==========
+# 扫「plain wikilink + 判断/立场动词」段落——plain wikilink 丢语义信息
+# （图谱只染 REFERENCES 灰边，不显示立场），应改成 [[?|RELATION]]
+# 词表覆盖中英文强信号词；首次接入为 warning，不阻 commit
+
+# 中文强信号词（直接 substring 匹配）；英文词用 \b 词边界 + IGNORECASE
+_IMPLICIT_RELATION_VERBS_ZH = {
+    "反驳", "支持", "延伸", "扩展", "属于", "组成", "替代", "代替",
+    "对应", "领先", "落后", "超过", "弱于", "强于", "关键", "基础",
+    "前提", "挑战", "对照", "类似", "反对", "印证", "证实", "证伪",
+    "支撑",
+}
+_IMPLICIT_RELATION_VERBS_EN = {
+    "supports", "refutes", "extends", "alternative",
+    "supersedes", "based on", "builds on", "contrasts", "outperforms",
+}
+_IMPLICIT_VERB_EN_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(w) for w in _IMPLICIT_RELATION_VERBS_EN) + r")\b",
+    re.IGNORECASE,
+)
+
+
+def _body_after_first_h2(content: str) -> str:
+    """返回第一个 H2 (`## `) 行开始的内容；用于跳过 source_summary 顶部元信息块。
+
+    没有 H2 时返回原文（fallback：全文扫一遍，可能有少量误报可接受）。"""
+    lines = content.split("\n")
+    for i, line in enumerate(lines):
+        if line.startswith("## "):
+            return "\n".join(lines[i:])
+    return content
+
+
+def _is_self_link(page_path: str, normalized_target: str) -> bool:
+    """plain wikilink 目标是否指向同一文件（自链）——自链不应报警。"""
+    target = normalized_target.replace(".md", "")
+    page = page_path.replace(".md", "")
+    return target == page or target == page.split("/")[-1]
+
+
+def list_implicit_relations(pages) -> list[dict]:
+    """扫 plain wikilink（alias / 无 RELATION）+ 判断/立场动词，提示应补 RELATION。
+
+    跳过：raw 链接（走 anchor 编号）、已合规的 RELATION 链接、自链、
+    归档区 / index / stub 标签、callout、表格行、代码块、source_summary
+    顶部元信息块（用 _body_after_first_h2 切）。
+
+    词表故意收窄：模糊词（"也"、"用"、"用 X 来"）会大量误报，不收。
+    首次接入建议只报警（不接 commit 钩子），看 1-2 周真实命中后再调阈值。
+    """
+    out = []
+    for page in pages:
+        if _is_exempt(page):
+            continue
+        if page.type in BARE_CLAIMS_SKIP_TYPES:
+            continue
+        # 跳过 source_summary 顶部元信息块（第一个 H2 之前）
+        body = _body_after_first_h2(page.raw_content)
+        for blk in split_blocks(body):
+            if blk.kind not in ("paragraph", "list", "blockquote"):
+                continue
+            scan_text = mask_code_spans(blk.text)
+            if CALLOUT_RE.search(scan_text):
+                continue
+            if scan_text.lstrip().startswith("|"):
+                continue
+            # 找 plain wikilink（不扫已合规的 RELATION 链接 + raw 链接 + 自链）
+            plain_links: list[str] = []
+            for m in WIKILINK_RE.finditer(scan_text):
+                target = m.group(1) or ""
+                if target.startswith("raw/"):
+                    continue
+                _, relation = split_alias_or_relation(m.group(3))
+                if relation:
+                    continue  # 已合规
+                normalized = normalize_link_target(target)
+                if _is_self_link(page.path, normalized):
+                    continue
+                plain_links.append(m.group(0))
+            if not plain_links:
+                continue
+            # 找判断动词
+            matched_verbs: list[str] = []
+            for v in _IMPLICIT_RELATION_VERBS_ZH:
+                if v in scan_text:
+                    matched_verbs.append(v)
+            for m in _IMPLICIT_VERB_EN_RE.finditer(scan_text):
+                matched_verbs.append(m.group(0).lower())
+            if not matched_verbs:
+                continue
+            preview = re.sub(r"\s+", " ", scan_text).strip()
+            if len(preview) > 200:
+                preview = preview[:200] + "…"
+            out.append({
+                "path": page.path,
+                "title": page.title,
+                "type": page.type,
+                "line": blk.line_start,
+                "preview": preview,
+                "matched_verbs": list(dict.fromkeys(matched_verbs)),
+                "plain_wikilinks": list(dict.fromkeys(plain_links)),
+            })
+    return out
+
+
 # ============================================================
 # 健康度
 # ============================================================
@@ -734,9 +917,13 @@ def health_report(pages, backlinks):
         broken_refs_by_reason[ref["reason"]] = broken_refs_by_reason.get(ref["reason"], 0) + 1
     unsummarized = list_unsummarized_sections(pages)
     bare_claims = list_bare_claims(pages)
+    coarse_citations = list_coarse_citations(pages)
     index_mismatches = list_index_count_mismatches(pages)
     source_issues = list_source_count_issues(pages)
+    status_issues = list_status_issues(pages)
     relation_issues = list_relation_issues(pages)
+    relation_balance_issues = list_relation_balance(pages)
+    implicit_relations = list_implicit_relations(pages)
     i18n_violations = list_i18n_violations()
 
     today = datetime.now().date()
@@ -773,9 +960,13 @@ def health_report(pages, backlinks):
         "broken_refs_by_reason": broken_refs_by_reason,
         "unsummarized_sections_count": len(unsummarized),
         "bare_claims_count": len(bare_claims),
+        "coarse_citations_count": len(coarse_citations),
         "index_count_mismatches_count": len(index_mismatches),
         "source_issues_count": len(source_issues),
+        "status_issues_count": len(status_issues),
         "relation_issues_count": len(relation_issues),
+        "relation_balance_issues_count": len(relation_balance_issues),
+        "implicit_relations_count": len(implicit_relations),
         "i18n_violations_count": len(i18n_violations),
         "last_check": today.isoformat(),
     }
@@ -1200,6 +1391,11 @@ NUMERIC_CLAIM_PATTERNS = [
 #   - [[wiki/sources/...]]  经 source_summary 中介（合法）
 #   - [需要来源]       显式占位
 REFERENCE_SUPPORT_RE = re.compile(r"\[\[raw/|\[\[wiki/sources/|\[需要来源\]")
+
+# 整页 raw 引用（无 #^anchor、无 |别名）vs 块级 raw 引用（含 #^）——
+# 用于 list-coarse-citations：论断只挂整页引用、未精确到块时报「引用粒度不足」。
+RAW_PAGE_CITE_RE = re.compile(r"\[\[raw/[^\]\|#]+\]\]")
+RAW_BLOCK_CITE_RE = re.compile(r"\[\[raw/[^\]]*#\^")
 
 # 跳过 callout / 表格行：典型 false positive 来源
 # - [!WARNING] / [!NOTE] / [!TIP] 等 callout 多为 recap 性质，原引用在外围段
@@ -1744,6 +1940,123 @@ def list_bare_claims(pages) -> list[dict]:
     return out
 
 
+def list_coarse_citations(pages) -> list[dict]:
+    """扫 wiki paragraph / list / blockquote 块：含具体数字论断、且**只挂整页
+    `[[raw/X]]` 引用、未精确到块级 `[[raw/X#^anchor]]`** → 列入「引用粒度不足」。
+
+    与 list_bare_claims 互补：bare = 有数字但无任何 raw 引用；coarse = 有数字 + 有
+    raw 引用但只到整页。块级 anchor 才能精确溯源、且渲染论文式 [n] 上标。
+    任一块级 `#^` 引用即视为合规、不报；无任何整页引用的归 bare-claims、不在此报。
+
+    跳过同 list_bare_claims（deprecated / 归档 / index / lint·stub 标签 /
+    callout / 表格行 / 代码内字面）。
+    """
+    out = []
+    for page in pages:
+        if _is_exempt(page):
+            continue
+        if page.type in BARE_CLAIMS_SKIP_TYPES:
+            continue
+        if any(t in BARE_CLAIMS_SKIP_TAGS for t in page.tags):
+            continue
+        if any(t in {"to-be-updated", "stub"} for t in page.tags):
+            continue
+        for blk in split_blocks(page.raw_content):
+            if blk.kind not in ("paragraph", "list", "blockquote"):
+                continue
+            block_text = ANCHOR_TAIL_RE.sub("", blk.text)
+            if CALLOUT_RE.search(block_text):
+                continue
+            if block_text.lstrip().startswith("|"):
+                continue
+            scan_text = mask_code_spans(block_text)
+            hits = []
+            for pat in NUMERIC_CLAIM_PATTERNS:
+                hits.extend(m.group().strip() for m in pat.finditer(scan_text))
+            if not hits:
+                continue
+            # 已含块级引用 → 合规；无整页引用 → 属 bare-claims 范畴，不在此报
+            if RAW_BLOCK_CITE_RE.search(scan_text):
+                continue
+            if not RAW_PAGE_CITE_RE.search(scan_text):
+                continue
+            hits = list(dict.fromkeys(hits))
+            coarse_refs = list(dict.fromkeys(RAW_PAGE_CITE_RE.findall(scan_text)))
+            preview = re.sub(r"\s+", " ", block_text).strip()
+            if len(preview) > 200:
+                preview = preview[:200] + "…"
+            out.append({
+                "path": page.path,
+                "title": page.title,
+                "type": page.type,
+                "line": blk.line_start,
+                "matched": hits,
+                "coarse_refs": coarse_refs,
+                "preview": preview,
+            })
+    return out
+
+
+def list_status_issues(pages) -> list[dict]:
+    """扫 `status: reviewed` 但 `last_modified_by != Human` 的页面：
+    reviewed（"已审阅"）语义 = 人类审阅过；LLM 自己写入的页面不该自称已审，
+    应保持 `draft`，由人类审阅后才改成 `reviewed` + `last_modified_by: Human`。
+    跳过 deprecated / 归档区（_is_exempt）。
+    """
+    out = []
+    for page in pages:
+        if _is_exempt(page):
+            continue
+        if page.status == "reviewed" and page.last_modified_by != "Human":
+            out.append({
+                "path": page.path,
+                "title": page.title,
+                "type": page.type,
+                "status": page.status,
+                "last_modified_by": page.last_modified_by,
+            })
+    return out
+
+
+def fmt_status_issues(items: list[dict]):
+    if not items:
+        print("✅ 没有发现 status 矛盾（reviewed 均由人类 Human 设置）")
+        return
+    print(f"⚠️  发现 {len(items)} 处 status 矛盾（标 reviewed 但 last_modified_by 非 Human）：\n")
+    print("    （reviewed=「已审阅」应由人类审阅后设置；LLM 写入的页面应为 draft）\n")
+    for it in items:
+        print(f"  {it['path']}  ({it['title']}, {it['type']}) — status={it['status']}, by={it['last_modified_by']}")
+    print("\n    修复: 改回 status: draft（或人类审阅后把 last_modified_by 改为 Human）")
+    print()
+
+
+def fmt_relation_balance(items: list[dict]):
+    if not items:
+        print("✅ 关系词频次均衡（无单一关系词占比 > 30%）")
+        return
+    print(f"⚠️  发现 {len(items)} 个关系词占比过高（> 30% 阈值）：\n")
+    print(f"    （标准关系白名单：{sorted(RELATION_TYPES)}）\n")
+    for it in items:
+        pct = it["ratio"] * 100
+        print(f"  {it['relation']}: {it['count']}/{it['total_relations']} = {pct:.0f}% (阈值 {it['threshold']:.0%})")
+        print(f"    建议: {it['suggestion']}")
+        print()
+
+
+def fmt_implicit_relations(items: list[dict]):
+    if not items:
+        print("✅ 没有发现隐含关系（plain wikilink 配判断/立场动词的段落都已加 RELATION）")
+        return
+    print(f"⚠️  发现 {len(items)} 处隐含关系（plain wikilink + 判断动词，应改 [[?|RELATION]]）：\n")
+    print("    （判断词: " + "、".join(sorted(_IMPLICIT_RELATION_VERBS_ZH)) + "）\n")
+    for it in items:
+        print(f"  {it['path']}:{it['line']}  ({it['title']}, {it['type']})")
+        print(f"    判断词: {', '.join(it['matched_verbs'])}")
+        print(f"    plain wikilink: {' '.join(it['plain_wikilinks'])}")
+        print(f"    片段: {it['preview']}")
+        print()
+
+
 # ========== i18n 硬编码扫描（list-i18n-violations） ==========
 # 扫 web/ 下的 .tsx 文件，找硬编码的中文 UI 字符串。
 # CLAUDE.md "Web 管理台国际化方案" 明文禁止：
@@ -2024,8 +2337,10 @@ def fmt_health(report):
             print(f"     ├─ {reason:30} {n}")
     status_line("被引用但缺章节摘要", report.get("unsummarized_sections_count", 0))
     status_line("裸论断（含数字但无引用支撑）", report.get("bare_claims_count", 0))
+    status_line("论断仅整页引用（应升块级 anchor）", report.get("coarse_citations_count", 0))
     status_line("索引 page_count 与 scope 不一致", report.get("index_count_mismatches_count", 0))
     status_line("source_count 与 sources 数组不一致 / 论断页缺 source", report.get("source_issues_count", 0))
+    status_line("status=reviewed 但非人类审阅（last_modified_by≠Human）", report.get("status_issues_count", 0))
     status_line("Web 硬编码中文（违反 i18n）", report.get("i18n_violations_count", 0))
     print()
     print(f"检查时间: {report['last_check']}")
@@ -2294,6 +2609,22 @@ def fmt_bare_claims(items: list[dict]):
         print()
 
 
+def fmt_coarse_citations(items: list[dict]):
+    if not items:
+        print("✅ 没有发现引用粒度不足（论断仅挂整页 [[raw/X]]、未到块级 #^anchor）")
+        return
+    print(f"⚠️  发现 {len(items)} 处引用粒度不足：\n")
+    print("    （段落含数字论断，且只挂整页 [[raw/X]] 引用，未精确到块级 [[raw/X#^anchor]]；"
+          "块级 anchor 才能精确溯源 / 渲染 [n] 上标）\n")
+    for it in items:
+        print(f"  {it['path']}:{it['line']}  ({it['title']}, {it['type']})")
+        print(f"    数字: {', '.join(it['matched'])}")
+        print(f"    整页引用: {', '.join(it.get('coarse_refs', []))}")
+        print(f"    片段: {it['preview']}")
+        print(f"    修复: 用 k.py find-anchor 在 raw 里定位该论断所在块，升级为 [[raw/<file>#^<anchor>]]")
+        print()
+
+
 # ============================================================
 # new-workspace 脚手架
 # ============================================================
@@ -2412,8 +2743,9 @@ def _main_impl():
         help="输出 JSON 格式（给 LLM/脚本用）",
     )
     parser.add_argument(
-        "--workspace", dest="workspace", default="smb-ecommerce",
-        help="指定工作区名称（在 workspaces/ 下查找），默认 smb-ecommerce",
+        "--workspace", dest="workspace", default=None,
+        help="指定工作区名称（在 workspaces/ 下查找）。"
+             "默认会自动选择第一个存在的 workspace；如果没有则报错并提示运行 `k.py new-workspace <name>` 创建。",
     )
 
     # 共享 parent：让 --json 在子命令后面也能用
@@ -2478,9 +2810,13 @@ def _main_impl():
     sub.add_parser("list-broken-refs", help="扫描 wiki/ 中失效的 [[raw/...#^anchor]] 引用", parents=[common])
     sub.add_parser("list-unsummarized", help="扫描被 wiki 章节引用但 outline.json 中 agent_summary 为 null 的章节", parents=[common])
     sub.add_parser("list-bare-claims", help="扫描含数字 / 百分比 / NLP 指标但无 [[raw/...]] 或 [需要来源] 支撑的段落", parents=[common])
+    sub.add_parser("list-coarse-citations", help="扫描含数字论断但只挂整页 [[raw/X]]、未到块级 [[raw/X#^anchor]] 的段落（引用粒度不足）", parents=[common])
     sub.add_parser("list-index-mismatches", help="扫描 type=index 页：page_count 字段与 scope 实际匹配数不一致的", parents=[common])
     sub.add_parser("list-source-issues", help="扫描 source_count 与 sources 数组不一致 / 论断页缺 source 不标 #to-be-updated 等问题", parents=[common])
+    sub.add_parser("list-status-issues", help="扫描 status=reviewed 但 last_modified_by≠Human 的矛盾页（LLM 写入页自称已审阅）", parents=[common])
     sub.add_parser("list-relation-issues", help="扫描 [[X|RELATION]] 中非标准关系类型词（拼写错误 / 未在白名单）", parents=[common])
+    sub.add_parser("list-relation-balance", help="扫描关系词频次失衡：单一关系词占比 > 30% 报警（防 LLM 偷懒用最弱关系词）", parents=[common])
+    sub.add_parser("list-implicit-relations", help="扫描 plain wikilink + 判断/立场动词的段落（应改 [[?|RELATION]] 给图谱染色）", parents=[common])
     sub.add_parser("list-i18n-violations", help="扫描 web/ 下 .tsx 中硬编码的中文 UI 字符串（应走 t() / useT()）", parents=[common])
 
     p_new = sub.add_parser(
@@ -2521,8 +2857,35 @@ def _main_impl():
     # k-5 安全约束：ws_root 必须是 workspaces/ 下的真实目录——
     # 既挡 `../` 穿越（如 --workspace ../../etc），也挡不存在的工作区名。
     global PROJECT_ROOT, WIKI_DIR, RAW_DIR
+
+    # 计算有效 workspace 列表（用于 fallback + 错误信息）
+    workspaces_root = (DATA_ROOT / "workspaces").resolve()
+    valid_workspaces: list[str] = []
+    if workspaces_root.is_dir():
+        valid_workspaces = [
+            d.name for d in sorted(workspaces_root.iterdir())
+            if d.is_dir() and not d.name.startswith(".")
+        ]
+
+    # 没指定 workspace 时：自动选第一个存在的；没有则报错
+    if not args.workspace:
+        if not valid_workspaces:
+            print(
+                f"错误: 没有可用的 workspace（workspaces/ 为空或不存在）。"
+                + f"\n  请先创建 workspace: python scripts/k.py new-workspace <name>"
+                + (f"\n  （数据根: {workspaces_root}）"),
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        args.workspace = valid_workspaces[0]
+        if len(valid_workspaces) > 1:
+            print(
+                f"[info] 未指定 --workspace，自动使用 '{args.workspace}'"
+                + f"（共有 {len(valid_workspaces)} 个 workspace；用 --workspace 切换）",
+                file=sys.stderr,
+            )
+
     if args.workspace:
-        workspaces_root = (DATA_ROOT / "workspaces").resolve()
         if not workspaces_root.is_dir():
             print(
                 f"错误: 数据根下没有 workspaces/ 目录: {workspaces_root}"
@@ -2720,6 +3083,13 @@ def _main_impl():
         else:
             fmt_bare_claims(items)
 
+    elif args.cmd == "list-coarse-citations":
+        items = list_coarse_citations(pages)
+        if args.json:
+            output_json(items)
+        else:
+            fmt_coarse_citations(items)
+
     elif args.cmd == "list-index-mismatches":
         items = list_index_count_mismatches(pages)
         if args.json:
@@ -2734,6 +3104,13 @@ def _main_impl():
         else:
             fmt_source_issues(items)
 
+    elif args.cmd == "list-status-issues":
+        items = list_status_issues(pages)
+        if args.json:
+            output_json(items)
+        else:
+            fmt_status_issues(items)
+
     elif args.cmd == "list-i18n-violations":
         items = list_i18n_violations()
         if args.json:
@@ -2747,6 +3124,20 @@ def _main_impl():
             output_json(items)
         else:
             fmt_relation_issues(items)
+
+    elif args.cmd == "list-relation-balance":
+        items = list_relation_balance(pages)
+        if args.json:
+            output_json(items)
+        else:
+            fmt_relation_balance(items)
+
+    elif args.cmd == "list-implicit-relations":
+        items = list_implicit_relations(pages)
+        if args.json:
+            output_json(items)
+        else:
+            fmt_implicit_relations(items)
 
     elif args.cmd == "graph":
         backlinks = build_link_graph(pages)

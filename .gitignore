@@ -1,12 +1,28 @@
 # 私人数据默认不进开源仓库（与 CLAUDE.md「my_thoughts/raw 默认不进开源仓库」一致）。
 # 注意：.gitignore 只阻止「未来」提交，不会移除「历史」里已提交的旧顶层 raw/wiki/my_thoughts——
-# 历史清理是人工步骤（git filter-repo / BFG），见 docs/release-checklist.md。
+# 历史清理是人工步骤（git filter-repo / BFG）。
 #
-# 多 workspace 数据层（按主题隔离）
-workspaces/*/raw/
-workspaces/*/my_thoughts/
+# 多 workspace 数据层（按主题隔离）——忽略内容，但用 .gitkeep 保留空目录骨架，
+# 让 fresh clone 的每个库都带 raw/ 与 my_thoughts/ 占位（用户知道往哪放数据）。
+workspaces/*/raw/*
+!workspaces/*/raw/.gitkeep
+workspaces/*/my_thoughts/*
+!workspaces/*/my_thoughts/.gitkeep
 workspaces/*/.cache/
 workspaces/*/exports/
+#
+# 个人 IP workspace —— 整库（含 wiki）均为作者个人/商业敏感资料，
+# 整体不进这个准备开源的引擎 repo，仅本地保存（用户指定，2026-06-17）
+workspaces/ip/
+#
+# RAG 对照实验基线：源码（compare.py/deck.js/*.workflow.js/expand_corpus.py）与结果
+# （results_*.{json,md}、expand_report.txt）入库以便复现；但 embedding 缓存（约 190MB *.npy）
+# 与 deck 渲染产物（pdf/pptx/slide 图）属派生层，可由脚本重建——不入库（与「源进派生出」一致）。
+workspaces/*/rag_baseline/cache/
+workspaces/*/rag_baseline/*.npy
+workspaces/*/rag_baseline/*.pdf
+workspaces/*/rag_baseline/*.pptx
+workspaces/*/rag_baseline/slide-*.jpg
 #
 # 旧的扁平顶层布局（workspace 迁移前遗留；新结构不再使用，但防止误提交）
 /raw/
@@ -84,6 +100,11 @@ tools/debug-console/out/
 
 # Playwright CLI 临时快照（人工 UI 巡检产出，非源码）
 .playwright-cli/
+
+# 发布筹备内部产物（绝不进公开仓；防 git add -A 误入库）
+/RELEASE_PREP_REPORT.md
+*_PREP_REPORT.md
+.claude/*.lock
 
 # 大文件请使用 Git LFS
 # raw/assets/*.pdf
