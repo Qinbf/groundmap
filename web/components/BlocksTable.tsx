@@ -104,7 +104,7 @@ export function BlocksTable({ docPath, blocks }: BlocksTableProps) {
                       ^{b.anchor}
                     </span>
                   ) : (
-                    <span className="opacity-50">(no anchor)</span>
+                    <span className="opacity-50">{t("blocks.no_anchor")}</span>
                   )}
                   {!isHeading && b.owning_section_anchor ? (
                     <a

@@ -478,3 +478,238 @@ class TestFindOrphansDeprecated:
         orphan_paths = [o.path for o in orphans]
         assert "wiki/concepts/old.md" not in orphan_paths
         assert "wiki/concepts/fresh.md" in orphan_paths
+
+
+# ============================================================
+# list_relation_balance
+# ============================================================
+
+class TestRelationBalance:
+    def test_empty_kb(self, fake_kb):
+        pages = k.load_all_wiki_pages()
+        assert k.list_relation_balance(pages) == []
+
+    def test_below_min_total(self, fake_kb):
+        # 4 个关系词（共 4 次）< min_total=5 → 不报警
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\nA 反对 [[wiki/concepts/y|SUPPORTS]] B "
+            "[[wiki/concepts/y|REFUTES]] C [[wiki/concepts/y|PART_OF]] D "
+            "[[wiki/concepts/y|EXTENDS]]。\n",
+        )
+        pages = k.load_all_wiki_pages()
+        assert k.list_relation_balance(pages) == []
+
+    def test_alternative_dominates(self, fake_kb):
+        # 6 个 ALTERNATIVE_TO / 共 8 关系词 = 75% → 报警
+        body = "\n".join(
+            f"- line {i}: see [[wiki/concepts/y|ALTERNATIVE_TO]]"
+            for i in range(6)
+        ) + "\n- a: [[wiki/concepts/y|SUPPORTS]]\n- b: [[wiki/concepts/y|PART_OF]]\n"
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            f"# X\n\n{body}",
+        )
+        pages = k.load_all_wiki_pages()
+        items = k.list_relation_balance(pages)
+        assert len(items) == 1
+        assert items[0]["relation"] == "ALTERNATIVE_TO"
+        assert items[0]["count"] == 6
+        assert items[0]["total_relations"] == 8
+        assert items[0]["ratio"] > 0.30
+        assert "ALTERNATIVE_TO" in items[0]["suggestion"]
+
+    def test_balanced(self, fake_kb):
+        # 7 关系词各 1 次（共 7），最高 14% < 30% → 不报警
+        rels = ["SUPPORTS", "REFUTES", "EXTENDS", "IS_A",
+                "PART_OF", "ALTERNATIVE_TO", "CITES"]
+        body = "\n".join(
+            f"- line {i}: [[wiki/concepts/y|{r}]]"
+            for i, r in enumerate(rels)
+        )
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            f"# X\n\n{body}",
+        )
+        pages = k.load_all_wiki_pages()
+        assert k.list_relation_balance(pages) == []
+
+    def test_code_block_excluded(self, fake_kb):
+        # 代码块里的关系词不计入
+        body = (
+            "```\n"
+            "fake [[wiki/concepts/y|ALTERNATIVE_TO]] "
+            "[[wiki/concepts/y|ALTERNATIVE_TO]] "
+            "[[wiki/concepts/y|ALTERNATIVE_TO]]\n"
+            "```\n\n"
+            "正文 [[wiki/concepts/y|SUPPORTS]] [[wiki/concepts/y|PART_OF]]\n"
+        )
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            f"# X\n\n{body}",
+        )
+        pages = k.load_all_wiki_pages()
+        # 正文只有 2 个关系词，远低于 min_total → 不报警
+        assert k.list_relation_balance(pages) == []
+
+    def test_exempt_archived_ignored(self, fake_kb):
+        # deprecated 页跳过
+        write_md(
+            fake_kb / "wiki" / "_archive" / "old.md",
+            standard_fm(status="deprecated"),
+            "# old\n\n"
+            + " ".join(f"[[wiki/concepts/y|ALTERNATIVE_TO]]" for _ in range(8)),
+        )
+        write_md(
+            fake_kb / "wiki" / "concepts" / "fresh.md",
+            standard_fm(),
+            "# fresh\n\n正文 plain.\n",
+        )
+        pages = k.load_all_wiki_pages()
+        assert k.list_relation_balance(pages) == []
+
+
+# ============================================================
+# list_implicit_relations
+# ============================================================
+
+class TestImplicitRelations:
+    def test_empty(self, fake_kb):
+        pages = k.load_all_wiki_pages()
+        assert k.list_implicit_relations(pages) == []
+
+    def test_judgment_verb_detected(self, fake_kb):
+        # "挑战" + plain wikilink → 命中
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\n本文挑战 [[wiki/concepts/y]] 的旧假设。\n",
+        )
+        pages = k.load_all_wiki_pages()
+        items = k.list_implicit_relations(pages)
+        assert len(items) == 1
+        assert "挑战" in items[0]["matched_verbs"]
+        assert "[[wiki/concepts/y]]" in items[0]["plain_wikilinks"]
+
+    def test_compliant_relation_skipped(self, fake_kb):
+        # "挑战" 但已带 RELATION → 不报
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\n本文挑战 [[wiki/concepts/y|REFUTES]] 的旧假设。\n",
+        )
+        pages = k.load_all_wiki_pages()
+        assert k.list_implicit_relations(pages) == []
+
+    def test_no_wikilink(self, fake_kb):
+        # 动词但无 plain wikilink → 不报
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\n本文挑战既有假设,但没有具体指向。\n",
+        )
+        pages = k.load_all_wiki_pages()
+        assert k.list_implicit_relations(pages) == []
+
+    def test_self_link_excluded(self, fake_kb):
+        # 自链（指向本文件）→ 不报
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\n本文挑战 [[wiki/concepts/p]] 同名问题。\n",
+        )
+        pages = k.load_all_wiki_pages()
+        assert k.list_implicit_relations(pages) == []
+
+    def test_raw_link_skipped(self, fake_kb):
+        # raw 链接不算 plain wikilink → 不报
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\n本文挑战 [[raw/papers/foo]] 的旧假设。\n",
+        )
+        pages = k.load_all_wiki_pages()
+        assert k.list_implicit_relations(pages) == []
+
+    def test_callout_skipped(self, fake_kb):
+        # callout 块里命中 → 不报
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\n"
+            "> [!NOTE] 提示\n"
+            "> 本文挑战 [[wiki/concepts/y]] 的旧假设。\n\n"
+            "正文 plain.\n",
+        )
+        pages = k.load_all_wiki_pages()
+        assert k.list_implicit_relations(pages) == []
+
+    def test_table_row_skipped(self, fake_kb):
+        # 表格行里命中 → 不报
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\n"
+            "| 列1 | 列2 |\n| --- | --- |\n"
+            "| 挑战 [[wiki/x]] | 数据 |\n",
+        )
+        pages = k.load_all_wiki_pages()
+        assert k.list_implicit_relations(pages) == []
+
+    def test_code_block_judgment_ignored(self, fake_kb):
+        # 代码里的"挑战"被 mask，正文 plain link 仍应报
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\n```\n挑战 [[wiki/x]]\n```\n\n正文挑战 [[wiki/y]]。\n",
+        )
+        pages = k.load_all_wiki_pages()
+        items = k.list_implicit_relations(pages)
+        assert len(items) == 1
+        assert "[[wiki/y]]" in items[0]["plain_wikilinks"]
+
+    def test_english_verb_detected(self, fake_kb):
+        # 英文 "builds on" + plain wikilink → 命中
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\nThis builds on [[wiki/concepts/y]] for better results.\n",
+        )
+        pages = k.load_all_wiki_pages()
+        items = k.list_implicit_relations(pages)
+        assert len(items) == 1
+        assert "builds on" in items[0]["matched_verbs"]
+
+    def test_meta_block_skipped(self, fake_kb):
+        # source_summary 的 H2 之前是元信息块 → 不扫
+        write_md(
+            fake_kb / "wiki" / "sources" / "p.md",
+            {**standard_fm(type="source_summary", source_count=1,
+                           sources=["[[raw/papers/foo]]"])},
+            "> **原始文件**: [[raw/papers/foo]]\n"
+            "> **作者**: A\n"
+            "> **发表**: 2026\n\n"
+            "## 摘要 ^h-2-1-aaaaaa\n\n"
+            "正文挑战 [[wiki/concepts/y]]。\n",
+        )
+        pages = k.load_all_wiki_pages()
+        items = k.list_implicit_relations(pages)
+        # 元信息块的"挑战"被切掉，正文应报
+        assert len(items) == 1
+        assert items[0]["path"] == "wiki/sources/p.md"
+
+    def test_index_pages_skipped(self, fake_kb):
+        fm = standard_fm(type="index")
+        fm["scope"] = "wiki/**"
+        fm["page_count"] = 0
+        write_md(
+            fake_kb / "wiki" / "indexes" / "ix.md",
+            fm,
+            "# Index\n\n本文挑战 [[wiki/concepts/y]] 的旧假设。\n",
+        )
+        pages = k.load_all_wiki_pages()
+        assert k.list_implicit_relations(pages) == []

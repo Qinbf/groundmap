@@ -67,6 +67,9 @@ export async function* streamOpenAI(
   client: OpenAI,
   input: TurnInput,
   tools: OpenAITool[],
+  /** provider 专有的额外 body 字段（如 DeepSeek 的 thinking 开关）。
+   *  只由对应 provider 传入，避免污染走同一函数的其他 provider。 */
+  extra?: Record<string, unknown>,
 ): AsyncIterable<AgentEvent> {
   const messages = toOpenAIMessages(input.system, input.messages);
 
@@ -78,7 +81,9 @@ export async function* streamOpenAI(
       tools,
       tool_choice: "auto",
       stream: true,
-    });
+      ...(extra ?? {}),
+    } as OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming &
+      Record<string, unknown>);
   } catch (e) {
     yield {
       kind: "turn-end",
@@ -101,6 +106,14 @@ export async function* streamOpenAI(
       const choice = chunk.choices?.[0];
       if (!choice) continue;
       const delta = choice.delta;
+      // 推理模型（DeepSeek deepseek-v4 / OpenAI o 系等）把思维链放在 reasoning_content，
+      // 它先于 content 流式到达。单独 emit 为 reasoning-delta，让前端实时展示「思考过程」，
+      // 不混进正文 text-delta（也就不会进 agent-loop 的 ANSWER 累积与回传历史）。
+      const reasoning = (delta as { reasoning_content?: string } | undefined)
+        ?.reasoning_content;
+      if (reasoning) {
+        yield { kind: "reasoning-delta", text: reasoning };
+      }
       if (delta?.content) {
         yield { kind: "text-delta", text: delta.content };
       }
@@ -126,6 +139,24 @@ export async function* streamOpenAI(
           input_tokens: chunk.usage.prompt_tokens,
           output_tokens: chunk.usage.completion_tokens,
         };
+        // DeepSeek（及兼容实现）会在 usage 里回 prompt_cache_hit_tokens /
+        // prompt_cache_miss_tokens —— 服务端自动前缀缓存的命中情况。
+        // 系统 prompt + 工具 schema + 预热的 root_index 构成稳定前缀，agent-loop 只
+        // **追加** messages（turn N 是 N+1 的严格前缀），故第 2 轮起应大比例命中、prefill 几乎免费。
+        // 这里只做一行诊断日志（零质量影响），便于确认「prefill 是否还有提速空间」。
+        const cu = chunk.usage as unknown as {
+          prompt_cache_hit_tokens?: number;
+          prompt_cache_miss_tokens?: number;
+        };
+        if (
+          typeof cu.prompt_cache_hit_tokens === "number" ||
+          typeof cu.prompt_cache_miss_tokens === "number"
+        ) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `[prefix-cache] model=${input.model} hit=${cu.prompt_cache_hit_tokens ?? 0} miss=${cu.prompt_cache_miss_tokens ?? 0} in=${chunk.usage.prompt_tokens ?? 0} out=${chunk.usage.completion_tokens ?? 0}`,
+          );
+        }
       }
     }
   } catch (e) {

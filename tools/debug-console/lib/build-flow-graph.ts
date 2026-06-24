@@ -16,6 +16,7 @@
  */
 import type { UIMessage } from "@/components/MessageBubble";
 import type { ToolCallVizData } from "@/components/ToolCallCard";
+import { t as i18nT, DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
 
 export type NodeKind = "query" | "file" | "search" | "list" | "thought" | "ghost" | "result" | "warning" | "other";
 export type NodeStatus = "pending" | "ok" | "error";
@@ -282,13 +283,20 @@ function extractCandidatePaths(result?: ToolCallVizData["result"]): string[] {
   return out;
 }
 
-function formatResultPreview(result?: ToolCallVizData["result"]): string {
+function formatResultPreview(
+  result: ToolCallVizData["result"] | undefined,
+  locale: Locale,
+): string {
   if (!result) return "";
   if (!result.ok) return `❌ ${result.error || ""}`;
-  if (result.data === undefined || result.data === null) return "(空)";
+  if (result.data === undefined || result.data === null)
+    return i18nT("flow.empty", locale);
   const str =
     typeof result.data === "string" ? result.data : JSON.stringify(result.data, null, 2);
-  return str.slice(0, 800) + (str.length > 800 ? "\n…(已截断)" : "");
+  return (
+    str.slice(0, 800) +
+    (str.length > 800 ? "\n" + i18nT("flow.truncated", locale) : "")
+  );
 }
 
 // ============================================================
@@ -303,6 +311,7 @@ export interface BuildResult {
 export function buildFlowGraph(
   msg: UIMessage | null | undefined,
   userQuery?: string | null,
+  locale: Locale = DEFAULT_LOCALE,
 ): BuildResult {
   if (!msg && !userQuery) return { nodes: [], edges: [] };
 
@@ -327,7 +336,7 @@ export function buildFlowGraph(
       key: QUERY_KEY,
       kind: "query",
       fileType: "unknown",
-      title: "问题",
+      title: i18nT("flow.node_question", locale),
       subtitle: trimmed.length > 80 ? trimmed.slice(0, 80) + "…" : trimmed,
       body: trimmed,
       hitCount: 1,
@@ -416,7 +425,7 @@ export function buildFlowGraph(
           kind: isAnswerResult ? "result" : "thought",
           fileType: "unknown",
           thoughtType: isAnswerResult ? undefined : t.type,
-          title: isAnswerResult ? "最终答案" : t.type,
+          title: isAnswerResult ? i18nT("flow.node_final_answer", locale) : t.type,
           subtitle: t.title,
           body: t.body,
           hitCount: 1,
@@ -457,6 +466,9 @@ export function buildFlowGraph(
       continue;
     }
 
+    // 思考过程（reasoning）不是工具调用，不进流程图——跳过
+    if (part.kind === "reasoning") continue;
+
     // tool-call
     const cls = classifyCall(part.call.name, part.call.args);
     const key = cls.key;
@@ -489,7 +501,7 @@ export function buildFlowGraph(
     node.toolCallIds.push(part.call.id);
     node.status = aggregateStatus(callList);
     node.durationMs = part.call.result?.duration_ms;
-    node.resultPreview = formatResultPreview(part.call.result);
+    node.resultPreview = formatResultPreview(part.call.result, locale);
     // 如果同一节点有 synthetic 和 user-driven 两种 call，user-driven 优先（不标 synthetic）
     if (!part.call.synthetic) node.synthetic = false;
 
@@ -522,12 +534,12 @@ export function buildFlowGraph(
       // 按工具名区分两种 mode 增强类型
       edgeLabel =
         part.call.name === "read_block"
-          ? "强制反查"
+          ? i18nT("flow.edge_forced_lookup", locale)
           : part.call.name === "backlinks" ||
               part.call.name === "outlinks" ||
               part.call.name === "read_page"
-            ? "强制 BFS"
-            : "强制";
+            ? i18nT("flow.edge_forced_bfs", locale)
+            : i18nT("flow.edge_forced", locale);
     } else {
       // 真实事件：恢复 synthetic 之前的主链状态
       if (preSyntheticPrevKey !== null) {
@@ -536,7 +548,7 @@ export function buildFlowGraph(
       }
       if (parallelGroupParent !== null) {
         edgeSource = parallelGroupParent;
-        edgeLabel = "并行"; // 表示这是并行分支（有信息量）；不带内部序号（无意义）
+        edgeLabel = i18nT("flow.edge_parallel", locale); // 并行分支（有信息量）；不带内部序号（无意义）
         parallelSiblings.push(key);
       } else {
         // 非并行分支：如果有上一组遗留的 fan-in，扇入到本工具；否则单边

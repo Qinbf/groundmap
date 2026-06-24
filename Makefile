@@ -2,7 +2,14 @@ PYTHON ?= python
 PIP ?= pip
 NPM ?= npm
 
-.PHONY: setup install-python install-web hooks test test-python lint-web build-web typecheck-web health web clean
+# Local dev servers listen on localhost. When a system/terminal proxy is on
+# (e.g. Clash/V2Ray exporting http_proxy), tools that honor it would route
+# loopback traffic through the proxy and fail. Force loopback to bypass the
+# proxy so `make web` / `make dev` work whether or not a proxy is active.
+NOPROXY := localhost,127.0.0.1,::1
+PROXY_BYPASS := no_proxy="$(NOPROXY)" NO_PROXY="$(NOPROXY)"
+
+.PHONY: setup install-python install-web hooks test test-python lint-web build-web typecheck-web health web dev clean
 
 setup: install-python install-web hooks
 
@@ -35,8 +42,14 @@ typecheck-web:
 health:
 	$(PYTHON) scripts/k.py health --json
 
+# Web console only (:3006).
 web:
-	cd web && $(NPM) run dev
+	cd web && $(PROXY_BYPASS) $(NPM) run dev
+
+# Web console (:3006) + debug console (:3100) together; Ctrl-C stops both.
+# Both inherit the loopback proxy bypass above.
+dev:
+	cd web && $(PROXY_BYPASS) $(NPM) run dev:all
 
 clean:
 	rm -rf .pytest_cache web/.next web/tsconfig.tsbuildinfo

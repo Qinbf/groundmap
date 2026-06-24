@@ -17,6 +17,8 @@ import {
 } from "react";
 import type { Components } from "react-markdown";
 import { extractTrailingAnchor } from "./anchor-extract";
+import { useT } from "./i18n-client";
+import type { TranslationKey } from "./i18n";
 
 const LINE_ANCHOR_RE =
   /^(.*?)[ \t]+\^([hpcft]-\d+(?:-\d+)?-[a-z0-9]+(?:-\d+)?)[ \t]*$/gm;
@@ -129,6 +131,7 @@ export const AnchorRegistryContext = createContext<Map<string, number>>(new Map(
 /** 同文档 trailing anchor 的上标：从 context 拿编号，渲染 [n] + 点击复制 */
 function AnchorSup({ id }: { id?: string }) {
   const registry = useContext(AnchorRegistryContext);
+  const t = useT();
   const [copied, setCopied] = useState(false);
   if (!id) return null;
   const num = registry.get(`self:${id}`);
@@ -158,7 +161,7 @@ function AnchorSup({ id }: { id?: string }) {
         href={`#ref-${num}`}
         onClick={handleClick}
         className="cursor-pointer select-none text-slate-500 no-underline hover:text-cyan-400"
-        title={copied ? "✓ 已复制" : `^${id} · 点击复制锚点`}
+        title={copied ? t("refs.copied") : t("refs.copy_tip", { id })}
       >
         [{num}]
       </a>
@@ -225,6 +228,7 @@ export const ANCHOR_COMPONENTS: Components = (() => {
 
 /** References 区：列出 [n] → anchor / wikilink 目标 + 预览 */
 export function References({ refs }: { refs: AnchorRef[] }) {
+  const t = useT();
   const [collapsed, setCollapsed] = useState(refs.length > 30);
 
   useEffect(() => {
@@ -250,7 +254,7 @@ export function References({ refs }: { refs: AnchorRef[] }) {
         <span className="text-xs leading-none text-slate-500">
           {collapsed ? "▶" : "▼"}
         </span>
-        <span>引用列表</span>
+        <span>{t("refs.list")}</span>
         <span className="text-xs font-normal text-slate-500">({refs.length})</span>
       </button>
       {!collapsed && (
@@ -265,6 +269,7 @@ export function References({ refs }: { refs: AnchorRef[] }) {
 }
 
 function ReferenceItem({ item }: { item: AnchorRef }) {
+  const t = useT();
   return (
     <li
       id={`ref-${item.num}`}
@@ -280,7 +285,7 @@ function ReferenceItem({ item }: { item: AnchorRef }) {
           target="_blank"
           rel="noreferrer"
           className="shrink-0 truncate font-mono text-xs text-amber-400 hover:underline"
-          title="在主管理台打开"
+          title={t("refs.open_admin_tip")}
         >
           {rawTargetLabel(item.target!)}
           {item.anchor ? `#^${item.anchor}` : ""}
@@ -289,7 +294,7 @@ function ReferenceItem({ item }: { item: AnchorRef }) {
         <a
           href={`#${item.anchor}`}
           className="shrink-0 font-mono text-xs text-slate-400 hover:text-cyan-400"
-          title="跳转到段落"
+          title={t("refs.jump_tip")}
         >
           ^{item.anchor}
         </a>
@@ -303,19 +308,20 @@ function ReferenceItem({ item }: { item: AnchorRef }) {
   );
 }
 
-const KIND_LABEL: Record<RefKind, string> = {
-  h: "段",
-  p: "段",
-  t: "表",
-  c: "码",
-  f: "图",
-  raw: "源",
+const KIND_LABEL_KEY: Record<RefKind, TranslationKey> = {
+  h: "refs.kind_h",
+  p: "refs.kind_p",
+  t: "refs.kind_t",
+  c: "refs.kind_c",
+  f: "refs.kind_f",
+  raw: "refs.kind_raw",
 };
 
 function KindBadge({ kind }: { kind: RefKind }) {
+  const t = useT();
   return (
     <span className="shrink-0 rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-slate-400">
-      {KIND_LABEL[kind]}
+      {t(KIND_LABEL_KEY[kind])}
     </span>
   );
 }

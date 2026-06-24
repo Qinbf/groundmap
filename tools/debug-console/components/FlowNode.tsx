@@ -12,6 +12,23 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { FileType, FlowNodeData } from "@/lib/build-flow-graph";
 import type { WikiRef } from "@/lib/wiki-ref";
 import { parseWikiRef } from "@/lib/wiki-ref";
+import { useT } from "@/lib/i18n-client";
+import type { TranslationKey } from "@/lib/i18n";
+
+/** 译函数类型（useT() 的返回） —— 透传给本文件的纯函数 render 辅助 */
+type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
+
+/** 文件类型 → 译表 key；unknown 无对应展示词，回退到 flow.type_file */
+const FILE_TYPE_KEY: Record<FileType, TranslationKey | null> = {
+  concept: "flow.type_concept",
+  analysis: "flow.type_analysis",
+  source: "flow.type_source",
+  entity: "flow.type_entity",
+  index: "flow.type_index",
+  raw: "flow.type_raw",
+  thoughts: "flow.type_thoughts",
+  unknown: null,
+};
 
 // 统一 handle 策略：完全不可见（透明 + 无 border + 无 shadow），位置精确贴在节点 box 边缘。
 // react-flow 的 edge path 用 handle 中心点作为端点，handle 中心在 box 边缘上 →
@@ -90,24 +107,15 @@ function badgeGlyph(data: FlowNodeData): string {
 }
 
 /** 卡片内部的类型标签（取代 FILE_COLOR.unknown 的 "?"） */
-function typeLabel(data: FlowNodeData): string {
+function typeLabel(data: FlowNodeData, t: TFn): string {
   if (data.kind === "file") {
-    const map: Record<FileType, string> = {
-      concept: "concept",
-      analysis: "analysis",
-      source: "source",
-      entity: "entity",
-      index: "index",
-      raw: "raw",
-      thoughts: "thoughts",
-      unknown: "file",
-    };
-    return map[data.fileType] || "file";
+    const key = FILE_TYPE_KEY[data.fileType];
+    return key ? t(key) : t("flow.type_file");
   }
-  if (data.kind === "search") return "search";
-  if (data.kind === "list") return "list";
+  if (data.kind === "search") return t("flow.type_search");
+  if (data.kind === "list") return t("flow.type_list");
   if (data.kind === "other" && data.toolName) {
-    // 把 snake_case 转成可读的缩写
+    // 工具名是机器标识符（snake_case），不翻译；只做可读化
     const name = data.toolName;
     if (name.startsWith("list_")) return name.replace("list_", "");
     return name;
@@ -131,23 +139,24 @@ interface FlowNodeProps extends NodeProps {
 }
 
 export function FlowNode({ data }: FlowNodeProps) {
+  const t = useT();
   // hover / click 由 ReactFlow 顶层的 onNodeMouseEnter / onNodeClick 统一处理（更可靠）
   const clickable = !!data.path && data.kind !== "query" && data.kind !== "thought";
 
-  if (data.kind === "query") return renderQuery(data);
-  if (data.kind === "thought") return renderThought(data);
-  if (data.kind === "ghost") return renderGhost(data, clickable);
-  if (data.kind === "result") return renderResult(data);
-  if (data.kind === "warning") return renderWarning(data);
-  return renderTool(data, clickable);
+  if (data.kind === "query") return renderQuery(data, t);
+  if (data.kind === "thought") return renderThought(data, t);
+  if (data.kind === "ghost") return renderGhost(data, clickable, t);
+  if (data.kind === "result") return renderResult(data, t);
+  if (data.kind === "warning") return renderWarning(data, t);
+  return renderTool(data, clickable, t);
 }
 
 // ─── Warning 节点（AI 提前结束 / 流中断）───
-function renderWarning(data: FlowNodeData) {
+function renderWarning(data: FlowNodeData, t: TFn) {
   return (
     <div
       className="node-enter relative w-[260px] cursor-pointer rounded-lg border-2 border-dashed border-red-500 bg-red-950 px-3 py-2 transition-all hover:brightness-125"
-      title="点击查看说明 + 追问建议"
+      title={t("flow.warn_tip")}
       style={{ minHeight: 80 }}
     >
       <Handle type="target" position={Position.Left} className={HANDLE_CLS_VERMILION} style={LEFT_STYLE} />
@@ -156,22 +165,22 @@ function renderWarning(data: FlowNodeData) {
       </div>
       <div className="mb-1 flex items-center gap-2">
         <span className="rounded bg-red-700 px-1.5 py-0.5 text-[10px] font-mono uppercase text-red-100">
-          INCOMPLETE
+          {t("flow.incomplete")}
         </span>
         <span className="text-sm font-bold text-red-100">{data.title}</span>
       </div>
       <div className="text-[11px] text-red-200">{data.subtitle}</div>
-      <div className="mt-1 text-[10px] italic text-red-300/70">点击右侧看追问建议 →</div>
+      <div className="mt-1 text-[10px] italic text-red-300/70">{t("flow.warn_hint")}</div>
     </div>
   );
 }
 
 // ─── Result 节点（最终输出，金黄大卡片）───
-function renderResult(data: FlowNodeData) {
+function renderResult(data: FlowNodeData, t: TFn) {
   return (
     <div
       className="node-enter relative w-[360px] cursor-pointer rounded-xl border-2 border-yellow-400 bg-gradient-to-br from-yellow-950 to-amber-950 px-4 py-3 transition-all hover:brightness-125"
-      title="点击查看完整答案"
+      title={t("flow.answer_tip")}
       style={{ minHeight: 150 }}
     >
       <Handle type="target" position={Position.Left} className={HANDLE_CLS_AMBER} style={LEFT_STYLE} />
@@ -181,7 +190,7 @@ function renderResult(data: FlowNodeData) {
       </div>
       <div className="mb-1 flex items-center gap-2">
         <span className="rounded bg-yellow-700 px-2 py-0.5 text-[10px] font-mono uppercase text-yellow-100">
-          ANSWER
+          {t("flow.answer")}
         </span>
         <span className="text-sm font-bold text-yellow-100">{data.title}</span>
       </div>
@@ -193,13 +202,13 @@ function renderResult(data: FlowNodeData) {
           {data.body}
         </div>
       )}
-      <div className="mt-2 text-[10px] italic text-yellow-300/70">点击右侧查看完整 →</div>
+      <div className="mt-2 text-[10px] italic text-yellow-300/70">{t("flow.answer_hint")}</div>
     </div>
   );
 }
 
 // ─── Query 节点（起始）───
-function renderQuery(data: FlowNodeData) {
+function renderQuery(data: FlowNodeData, t: TFn) {
   return (
     <div
       className={`node-enter relative w-72 rounded-xl border-2 px-4 py-3 ${QUERY_STYLE.bg} ${QUERY_STYLE.border} ${QUERY_STYLE.text}`}
@@ -208,14 +217,14 @@ function renderQuery(data: FlowNodeData) {
       <div className="absolute -left-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-900 text-xs font-bold text-indigo-200 ring-2 ring-indigo-400/60">
         ▶
       </div>
-      <div className="mb-1 text-[10px] uppercase tracking-wider opacity-70">💬 用户问题</div>
+      <div className="mb-1 text-[10px] uppercase tracking-wider opacity-70">{t("flow.query_label")}</div>
       <div className="line-clamp-3 text-sm leading-snug">{data.subtitle || data.title}</div>
     </div>
   );
 }
 
 // ─── Thought 小节点（思考步骤）───
-function renderThought(data: FlowNodeData) {
+function renderThought(data: FlowNodeData, t: TFn) {
   const palette = THOUGHT_COLOR[data.thoughtType || ""] || { bg: "bg-purple-950", border: "border-purple-400" };
   return (
     <div
@@ -227,7 +236,7 @@ function renderThought(data: FlowNodeData) {
       <div className="flex items-center gap-1.5">
         <span className="text-[10px]">🧠</span>
         <span className="font-mono text-[10px] font-bold uppercase text-slate-100">
-          {data.thoughtType || "thought"}
+          {data.thoughtType || t("flow.thought_fallback")}
         </span>
       </div>
       <div className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-slate-200">
@@ -238,8 +247,9 @@ function renderThought(data: FlowNodeData) {
 }
 
 // ─── Ghost 节点（候选未读）───
-function renderGhost(data: FlowNodeData, clickable: boolean) {
+function renderGhost(data: FlowNodeData, clickable: boolean, t: TFn) {
   const palette = FILE_COLOR[data.fileType] || FILE_COLOR.unknown;
+  const typeKey = FILE_TYPE_KEY[data.fileType];
   // ghost 节点："AI 提到但没读"——用 ink-2 不透明底 + 灰色边表达淡感（不再用 opacity-60，
   // 否则 path 会透过节点显示）
   return (
@@ -249,11 +259,11 @@ function renderGhost(data: FlowNodeData, clickable: boolean) {
     >
       <Handle type="target" position={Position.Left} className={HANDLE_CLS} style={LEFT_STYLE} />
       <div className="absolute -right-2 -top-2 flex h-5 items-center rounded-full bg-slate-700 px-1.5 text-[9px] text-slate-300 ring-1 ring-slate-500">
-        🫥 未读
+        {t("flow.ghost_unread")}
       </div>
       <div className="flex items-center gap-1">
         <span className={`rounded px-1 py-0.5 text-[9px] font-mono uppercase ${palette.text}`}>
-          {palette.label}
+          {typeKey ? t(typeKey) : palette.label}
         </span>
       </div>
       <div className="mt-0.5 truncate text-xs font-medium text-slate-200">{data.title}</div>
@@ -265,7 +275,7 @@ function renderGhost(data: FlowNodeData, clickable: boolean) {
 }
 
 // ─── 标准 file/search/list/other 节点 ───
-function renderTool(data: FlowNodeData, clickable: boolean) {
+function renderTool(data: FlowNodeData, clickable: boolean, t: TFn) {
   const palette = FILE_COLOR[data.fileType] || FILE_COLOR.unknown;
   const pending = data.status === "pending";
   const statusClass = pending
@@ -293,7 +303,7 @@ function renderTool(data: FlowNodeData, clickable: boolean) {
       {pending && (
         <div
           className="absolute right-1.5 top-1.5 z-10"
-          title="正在执行..."
+          title={t("flow.running")}
         >
           <div className="spinner-ring" />
         </div>
@@ -302,9 +312,9 @@ function renderTool(data: FlowNodeData, clickable: boolean) {
       {data.synthetic && !pending && (
         <div
           className="absolute -right-1 -top-2 rounded-full bg-orange-600 px-1.5 py-0.5 text-[9px] font-bold text-orange-100 ring-1 ring-orange-400"
-          title="mode 自动增强（audit anchor 反查 / explore BFS）"
+          title={t("flow.synthetic_tip")}
         >
-          强制
+          {t("flow.forced")}
         </div>
       )}
       <Handle type="target" position={Position.Left} className={HANDLE_CLS} style={LEFT_STYLE} />
@@ -319,7 +329,7 @@ function renderTool(data: FlowNodeData, clickable: boolean) {
       {data.hitCount > 1 && (
         <div
           className="absolute -right-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--amber)] px-1 text-[10px] font-bold text-[var(--ink)]"
-          title={`访问 ${data.hitCount} 次`}
+          title={t("flow.visited", { n: data.hitCount })}
         >
           ×{data.hitCount}
         </div>
@@ -327,7 +337,7 @@ function renderTool(data: FlowNodeData, clickable: boolean) {
 
       <div className="flex items-center gap-2">
         <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono uppercase ${palette.text} bg-black/30`}>
-          {typeLabel(data)}
+          {typeLabel(data, t)}
         </span>
       </div>
 

@@ -68,7 +68,16 @@ Open [http://localhost:3006](http://localhost:3006).
 
 ## Workspaces
 
-Engine code (`scripts/`, `web/`) is shared across topics; data lives under `workspaces/<name>/` with the same internal layout (`wiki/`, `raw/`, `exports/`, `my_thoughts/`, `.cache/`, `log.md`). Commands default to the `smb-ecommerce` workspace; pass `--workspace <name>` (CLI) or `KB_WORKSPACE=<name>` (Web) to switch. This repository ships `smb-ecommerce`, `rag-evolution`, and `ai-ml-demo`.
+Engine code (`scripts/`, `web/`) is shared across topics; data lives under `workspaces/<name>/` with the same internal layout (`wiki/`, `raw/`, `exports/`, `my_thoughts/`, `.cache/`, `log.md`). Commands default to the `my-research` workspace; pass `--workspace <name>` (CLI) or `KB_WORKSPACE=<name>` (Web) to switch.
+
+This repository ships **the engine only** — no workspace data is distributed (workspace `wiki/` pages are user-personal data; `raw/` sources are copyright-sensitive). On a fresh clone, no workspace exists yet. Create one with:
+
+```bash
+python scripts/k.py new-workspace my-research
+# Then ingest your own sources under workspaces/my-research/raw/articles/
+```
+
+To see the canonical workspace data layout and convention, look at `wiki/_templates/` (engine-level templates, not workspace data) or read `scripts/k.py new-workspace --help`.
 
 ## Explore the CLI
 
@@ -82,24 +91,24 @@ python scripts/k.py list-pages --json
 python scripts/k.py list-conflicts
 python scripts/k.py list-to-update
 
-# Read a bundled wiki page: outline, then a full section
-python scripts/k.py outline wiki/sources/cac_ec_law_2018.md
-python scripts/k.py read-section wiki/sources/cac_ec_law_2018.md "核心条款"
+# Read a wiki page (after you've created a workspace and ingested content): outline, then a full section
+python scripts/k.py outline wiki/sources/<your_page>.md
+python scripts/k.py read-section wiki/sources/<your_page>.md "核心条款"
 
 # Switch workspace
-python scripts/k.py --workspace ai-ml-demo search "transformer"
+python scripts/k.py --workspace my-research search "transformer"
 ```
 
 ## Convert a Source Document
 
-The example workspaces ship without their `raw/` source material (see the note at the top), so to try the conversion step you need to bring your own document. Put redistributable source material under a workspace's `raw/articles/` or `raw/papers/` directory, then run convert and inspect the outline. Using the default `smb-ecommerce` workspace and a file named `my_article.html` as an example:
+After creating a workspace with `k.py new-workspace my-research`, you can bring your own redistributable source material and ingest it. Put source files under a workspace's `raw/articles/` or `raw/papers/` directory, then run convert and inspect the outline. Using the `my-research` workspace and a file named `my_article.html` as an example:
 
 ```bash
-mkdir -p workspaces/smb-ecommerce/raw/articles
-cp /path/to/my_article.html workspaces/smb-ecommerce/raw/articles/
+mkdir -p workspaces/my-research/raw/articles
+cp /path/to/my_article.html workspaces/my-research/raw/articles/
 
 # convert.py takes a repo-relative directory
-python scripts/convert.py --dir workspaces/smb-ecommerce/raw/articles --ext .html
+python scripts/convert.py --dir workspaces/my-research/raw/articles --ext .html
 
 # k.py path arguments are workspace-relative (resolved under the active workspace)
 python scripts/k.py outline raw/articles/my_article.md

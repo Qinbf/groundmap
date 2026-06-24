@@ -10,7 +10,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.30.1",
     "@types/dagre": "^0.7.54",
     "@xyflow/react": "^12.10.2",
     "dagre": "^0.8.5",

@@ -35,7 +35,11 @@ export interface CitationVerifyResult {
 }
 
 const MAX_JUDGE = 12;
-const JUDGE_TIMEOUT_MS = 8000;
+// 灰区判官超时：判官是 temperature=0 / max_tokens=4 的 YES/NO，正常亚秒级返回；
+// 3s 已是极宽裕的上限。超时 fallback = null = **保守保留该引用**（不降级），
+// 故收紧超时**零质量风险**——只是给「判官卡死」兜个底，避免单条 hung call 把
+// 答案出完后的「引用后验」尾巴拖到 8s（该尾巴计入 stream 关闭、即输入框重新可用的时间）。
+const JUDGE_TIMEOUT_MS = 3000;
 
 /**
  * read_block 失败时：是不是「确定性不存在」（vs 网络/超时/反代/DNS）。

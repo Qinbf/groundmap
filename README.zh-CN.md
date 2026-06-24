@@ -6,8 +6,6 @@
 
 GroundMap 是一个本地优先的知识地图，建立在 Markdown、Git、稳定块级锚点和 agent 完整页面阅读之上。它适合想要"可审计、可溯源"知识库的团队和个人开发者，同时避免把向量数据库、文档切片、隐藏的 LLM runtime 塞进知识库核心仓库。
 
-> 当前仓库正在做开源发布准备。如果你从真实个人工作区发布，必须先清理私有 `raw/`、`wiki/`、`exports/`、`my_thoughts/` 和 Git 历史。见 [发布检查清单](docs/release-checklist.md)。
-
 ## 为什么需要它
 
 大多数 RAG 系统把召回率放在第一位：把文档切成 chunk、做 embedding、检索片段，再让 LLM 重建上下文。
@@ -67,7 +65,7 @@ make web
 
 然后打开 [http://localhost:3006](http://localhost:3006)。
 
-> 📦 **示例 workspace 的 `raw/` 原始资料不随仓库分发**（版权原因；`workspaces/*/raw/` 已被 `.gitignore` 排除）。示例 workspace 的 `wiki/` 页面是完整随仓分发的，可以正常浏览。fresh clone 后 `k.py health` 会报告非零的 **失效引用**（默认库 `smb-ecommerce` 约 287 条；三个示例库合计约 426 条——"raw 文件不存在"）和 **source 问题**（`broken-source-link`：`source_summary` 页引用的 `[[raw/...]]` 来源块不存在；默认库约 20 条）——**两者都属预期现象，不代表安装失败**，本质是同一个「raw 不在场」造成的，只是指向缺失 raw 来源块的深链无法解析。想体验完整的「转换 → 引用」闭环，把你自己的文档放进某个 workspace 的 `raw/` 即可。
+> 📦 **示例 workspace 的 `raw/` 原始资料不随仓库分发**（版权原因；`workspaces/*/raw/` 已被 `.gitignore` 排除）。示例 workspace 的 `wiki/` 页面是完整随仓分发的，可以正常浏览。fresh clone 后 `k.py health` 会报告非零的 **失效引用**（示例库里的"raw 文件不存在"）和 **source 问题**（`broken-source-link`：`source_summary` 页引用的 `[[raw/...]]` 来源块不存在）——**两者都属预期现象，不代表安装失败**，本质是同一个「raw 不在场」造成的，只是指向缺失 raw 来源块的深链无法解析。想体验完整的「转换 → 引用」闭环，把你自己的文档放进某个 workspace 的 `raw/` 即可。
 
 手动方式：
 
@@ -83,12 +81,21 @@ cd web && npm run lint && npm run build
 
 > ⚠️ **跑 `npm run build` 前请先停掉本地 dev server。** Web 管理台（`npm run dev`）与 `next build` 共用同一个 `web/.next/` 目录；dev server 在跑时执行生产构建会让运行中的 dev server 全部返回 404。仅验证类型请改用 `cd web && npx tsc --noEmit`。（CI 在干净环境里跑完整 build，不受此影响。）
 
+### 开了代理（Clash / VPN 等）也能正常访问
+
+本地服务监听 `localhost`（Web 管理台 `:3006`、调试控制台 `:3100`）。系统/终端开着代理时，按场景：
+
+- **一键启动（推荐）**：`make dev` 同时起 Web（`:3006`）+ 调试控制台（`:3100`），Ctrl-C 一起停；只起 Web 用 `make web`。两者都已内置 `no_proxy=localhost,127.0.0.1,::1`，本地服务及其子进程不会被代理劫持——**无论有没有开代理都能起**。
+- **直接用 `npm`**：若你绕过 Makefile 跑 `cd web && npm run dev` 且全局没配 `no_proxy`，命令行工具可能把 localhost 请求也发给代理。改用 `make`，或先 `export no_proxy=localhost,127.0.0.1,::1`（持久化可写进 `~/.zshenv`）。
+- **浏览器**：Chrome / Safari / 新版 Firefox 默认就绕过 `localhost`；若装了代理扩展（如 SwitchyOmega）导致打不开，把 `localhost, 127.0.0.1` 加入其绕过列表即可。
+- **页面白屏**：通常是 `.next` 缓存损坏（切分支 / 大改动后），与代理无关——`make clean` 后重启即可。
+
 ## 多工作区模型
 
-引擎代码（`scripts/`、`web/`）一套通用，数据按主题隔离在 `workspaces/<name>/` 下，每个 workspace 内部结构相同：`wiki/`、`raw/`、`exports/`、`my_thoughts/`、`.cache/`、`log.md`。不指定 workspace 时默认 `smb-ecommerce`。
+引擎代码（`scripts/`、`web/`）一套通用，数据按主题隔离在 `workspaces/<name>/` 下，每个 workspace 内部结构相同：`wiki/`、`raw/`、`exports/`、`my_thoughts/`、`.cache/`、`log.md`。不指定 workspace 时 CLI 自动选用一个（库多时会打印提示）；用 `--workspace` 指定。
 
 ```bash
-# 默认 workspace（smb-ecommerce）
+# 不带 --workspace：自动选用一个 workspace（库多时打印提示）
 python scripts/k.py health --json
 
 # 指定 workspace
@@ -96,7 +103,7 @@ python scripts/k.py --workspace ai-ml-demo search "transformer"
 cd web && KB_WORKSPACE=rag-evolution npm run dev
 ```
 
-本仓库自带三个示例工作区：`smb-ecommerce`（默认）、`rag-evolution`、`ai-ml-demo`。前两个是活跃演示库；`ai-ml-demo` 是刻意保留的 v0 归档库——其中多数页面带 `status: deprecated`，用来演示「只标记、不删除」的归档工作流。
+本仓库自带三个示例工作区：`smb-ecommerce`、`rag-evolution`、`ai-ml-demo`。前两个是活跃演示库；`ai-ml-demo` 是刻意保留的 v0 归档库——其中多数页面带 `status: deprecated`，用来演示「只标记、不删除」的归档工作流。
 
 Web 端顶栏还有一个 **workspace 切换器**（写 cookie `kb_workspace` 后 reload），可在界面直接切库、无需重启；`KB_WORKSPACE` 设的是启动时的初始默认。cookie 值会经 `resolveWorkspace()` 校验为真实存在的 workspace，被篡改也不会越出 workspaces 目录。
 
@@ -118,9 +125,8 @@ cd ~/tools/groundmap/web && KB_ROOT=~/work/项目A/kb-data KB_WORKSPACE=main npm
 
 ```bash
 python scripts/k.py health --json
-python scripts/k.py --workspace smb-ecommerce search "跨境电商"
-python scripts/k.py --workspace smb-ecommerce outline wiki/sources/cac_ec_law_2018.md
-python scripts/k.py --workspace smb-ecommerce read-section wiki/sources/cac_ec_law_2018.md "核心条款"
+python scripts/k.py --workspace rag-evolution search "retrieval"
+python scripts/k.py --workspace rag-evolution outline wiki/sources/bge.md
 python scripts/k.py list-conflicts
 python scripts/k.py list-to-update
 ```
@@ -144,7 +150,7 @@ npm run dev
 ├── .claude/skills/           # Claude Code 工作流技能（kb-ingest / query / lint / export / conflict-resolve）
 ├── .agents/skills/           # 上述技能的 Codex 镜像
 ├── wiki/_templates/          # 共享页面模板（所有 workspace 共用）
-├── workspaces/               # 按主题隔离的数据，可切换；默认 smb-ecommerce
+├── workspaces/               # 按主题隔离的数据，可切换；自带 smb-ecommerce / rag-evolution / ai-ml-demo 示例库
 │   └── <name>/
 │       ├── wiki/             # Markdown wiki 页面（root_index、indexes、concepts、entities、sources、analyses）
 │       ├── raw/              # 原始文档与转换后的 markdown（articles、papers、assets）
@@ -178,8 +184,6 @@ GroundMap 刻意不包含：
 - [Quickstart](docs/quickstart.md)
 - [为什么不用 embedding](docs/why-no-embeddings.md)
 - [Demo 方案](docs/demo.md)
-- [发布检查清单](docs/release-checklist.md)
-- [开源发布打法](docs/launch-playbook.md)
 - [Web 管理台](web/README.md)
 
 ## 路线图

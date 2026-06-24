@@ -6,8 +6,6 @@ English | [简体中文](README.zh-CN.md)
 
 GroundMap is a local-first knowledge map built on Markdown, Git, stable block anchors, and full-page agent reading. It is designed for teams and solo builders who want auditable, source-grounded knowledge without vector databases, document chunking, or hidden LLM runtime inside the core repository.
 
-> This repository is being prepared for open source release. If you are publishing from an existing personal workspace, scrub private `raw/`, `wiki/`, `exports/`, `my_thoughts/`, and Git history first. See [Release Checklist](docs/release-checklist.md).
-
 ## Why It Exists
 
 Most RAG systems optimize for recall first: split documents into chunks, embed them, retrieve fragments, and ask an LLM to reconstruct context.
@@ -67,7 +65,7 @@ make web
 
 Then open [http://localhost:3006](http://localhost:3006).
 
-> 📦 **Example `raw/` sources are not distributed with this repository** (copyright reasons; `workspaces/*/raw/` is excluded by `.gitignore`). The example workspaces ship their full `wiki/` pages, which remain completely browsable. After a fresh clone, `k.py health` reports nonzero **broken references** (~287 in the default `smb-ecommerce` workspace; ~426 summed across all three demo workspaces — "raw 文件不存在" / raw file missing) and **source issues** (`broken-source-link`: `source_summary` pages cite `[[raw/...]]` blocks that aren't present; ~20 in the default workspace) — **both are expected and do not mean your installation failed**; they are the same raw-absent artifact, only the deep links into missing raw blocks are unresolved. To exercise the full convert → cite loop, ingest your own documents into a workspace's `raw/`.
+> 📦 **Example `raw/` sources are not distributed with this repository** (copyright reasons; `workspaces/*/raw/` is excluded by `.gitignore`). The example workspaces ship their full `wiki/` pages, which remain completely browsable. After a fresh clone, `k.py health` reports nonzero **broken references** (across the example workspaces — "raw 文件不存在" / raw file missing) and **source issues** (`broken-source-link`: `source_summary` pages cite `[[raw/...]]` blocks that aren't present) — **both are expected and do not mean your installation failed**; they are the same raw-absent artifact, only the deep links into missing raw blocks are unresolved. To exercise the full convert → cite loop, ingest your own documents into a workspace's `raw/`.
 
 Manual setup:
 
@@ -83,12 +81,21 @@ cd web && npm run lint && npm run build
 
 > ⚠️ **Stop your dev server before running `npm run build`.** The Web console (`npm run dev`) and `next build` share the same `web/.next/` directory. Running a production build while a dev server is live can leave the dev server serving 404s. To validate types only without building, run `cd web && npx tsc --noEmit` instead. (CI runs the full build in a clean environment, which is fine.)
 
+### Working behind a proxy (Clash / VPN / etc.)
+
+Local servers listen on `localhost` (Web console `:3006`, debug console `:3100`). With a system/terminal proxy active:
+
+- **One command (recommended):** `make dev` starts the Web console (`:3006`) and the debug console (`:3100`) together (Ctrl-C stops both); `make web` starts just the Web console. Both set `no_proxy=localhost,127.0.0.1,::1`, so the local servers and their child processes are never routed through the proxy — they start **whether or not a proxy is on**.
+- **Using `npm` directly:** if you bypass the Makefile with `cd web && npm run dev` and have no global `no_proxy`, command-line tools may send loopback requests to the proxy. Use `make` instead, or `export no_proxy=localhost,127.0.0.1,::1` first (persist it in `~/.zshenv`).
+- **Browser:** Chrome / Safari / recent Firefox bypass `localhost` by default. If a proxy extension (e.g. SwitchyOmega) breaks access, add `localhost, 127.0.0.1` to its bypass list.
+- **Blank page:** usually a corrupted `.next` cache (after switching branches / large edits), unrelated to the proxy — run `make clean` and restart.
+
 ## Workspaces
 
-Engine code (`scripts/`, `web/`) is shared; data is isolated per topic under `workspaces/<name>/`. Each workspace has the same internal layout: `wiki/`, `raw/`, `exports/`, `my_thoughts/`, `.cache/`, and `log.md`. When no workspace is specified, commands default to `smb-ecommerce`.
+Engine code (`scripts/`, `web/`) is shared; data is isolated per topic under `workspaces/<name>/`. Each workspace has the same internal layout: `wiki/`, `raw/`, `exports/`, `my_thoughts/`, `.cache/`, and `log.md`. When no workspace is specified, the CLI auto-selects one (and prints a hint when several exist); pass `--workspace` to choose.
 
 ```bash
-# Default workspace (smb-ecommerce)
+# No --workspace: auto-selects a workspace (prints a hint when several exist)
 python scripts/k.py health --json
 
 # Target a specific workspace
@@ -96,7 +103,7 @@ python scripts/k.py --workspace ai-ml-demo search "transformer"
 cd web && KB_WORKSPACE=rag-evolution npm run dev
 ```
 
-This repository ships three example workspaces: `smb-ecommerce` (default), `rag-evolution`, and `ai-ml-demo`. The first two are living demos; `ai-ml-demo` is an archived v0 library kept on purpose — most of its pages carry `status: deprecated`, demonstrating the "mark, never delete" archival workflow.
+This repository ships three example workspaces: `smb-ecommerce`, `rag-evolution`, and `ai-ml-demo`. The first two are living demos; `ai-ml-demo` is an archived v0 library kept on purpose — most of its pages carry `status: deprecated`, demonstrating the "mark, never delete" archival workflow.
 
 The web top bar includes a **workspace switcher** (writes a `kb_workspace` cookie and reloads), so you can switch libraries live in the UI without restarting; `KB_WORKSPACE` sets the initial default. The cookie value is validated against the real workspace list (`resolveWorkspace()`), so a tampered cookie can't escape the workspaces directory.
 
@@ -118,9 +125,8 @@ All of the following work on a fresh clone (they only read the bundled `wiki/` p
 
 ```bash
 python scripts/k.py health --json
-python scripts/k.py --workspace smb-ecommerce search "cross-border"
-python scripts/k.py --workspace smb-ecommerce outline wiki/sources/cac_ec_law_2018.md
-python scripts/k.py --workspace smb-ecommerce read-section wiki/sources/cac_ec_law_2018.md "核心条款"
+python scripts/k.py --workspace rag-evolution search "retrieval"
+python scripts/k.py --workspace rag-evolution outline wiki/sources/bge.md
 python scripts/k.py list-conflicts
 python scripts/k.py list-to-update
 ```
@@ -144,7 +150,7 @@ npm run dev
 ├── .claude/skills/           # Claude Code workflow skills (kb-ingest / query / lint / export / conflict-resolve)
 ├── .agents/skills/           # Codex mirror of the skills above
 ├── wiki/_templates/          # Shared page templates (used by all workspaces)
-├── workspaces/               # Per-topic data, switchable; defaults to smb-ecommerce
+├── workspaces/               # Per-topic data, switchable; ships smb-ecommerce / rag-evolution / ai-ml-demo examples
 │   └── <name>/
 │       ├── wiki/             # Markdown wiki pages (root_index, indexes, concepts, entities, sources, analyses)
 │       ├── raw/              # Source documents and converted markdown (articles, papers, assets)
@@ -178,8 +184,6 @@ Those boundaries are deliberate. The open-source core focuses on the durable kno
 - [Quickstart](docs/quickstart.md)
 - [Why No Embeddings](docs/why-no-embeddings.md)
 - [Demo Plan](docs/demo.md)
-- [Release Checklist](docs/release-checklist.md)
-- [Launch Playbook](docs/launch-playbook.md)
 - [Web Console](web/README.md)
 
 ## Roadmap

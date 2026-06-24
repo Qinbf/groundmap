@@ -121,21 +121,21 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // 翻译 type/status/confidence 字段值（fallback 到原值）
 export function tType(value: string | undefined, locale: Locale): string {
-  if (!value) return "unknown";
+  if (!value) return t("type.unknown", locale);
   const key = `type.${value}` as TranslationKey;
   const translated = t(key, locale);
   return translated === key ? value : translated;
 }
 
 export function tStatus(value: string | undefined, locale: Locale): string {
-  if (!value) return "draft";
+  if (!value) return t("status.draft", locale);
   const key = `status.${value}` as TranslationKey;
   const translated = t(key, locale);
   return translated === key ? value : translated;
 }
 
 export function tConfidence(value: string | undefined, locale: Locale): string {
-  if (!value) return "medium";
+  if (!value) return t("confidence.medium", locale);
   const key = `confidence.${value}` as TranslationKey;
   const translated = t(key, locale);
   return translated === key ? value : translated;

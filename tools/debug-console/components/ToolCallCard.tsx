@@ -6,6 +6,9 @@
  * 展开态：参数表（key/value 双列）+ 结果（按数据形态：字符串预览 / 表格 / json 折叠）
  */
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { useT } from "@/lib/i18n-client";
 
 export interface ToolCallVizData {
   id: string;
@@ -59,10 +62,14 @@ function formatValue(v: unknown): string {
   }
 }
 
-function formatResult(result: ToolCallVizData["result"]): string {
+function formatResult(
+  result: ToolCallVizData["result"],
+  failLabel: string,
+  emptyLabel: string,
+): string {
   if (!result) return "";
-  if (!result.ok) return result.error || "调用失败";
-  if (result.data === undefined || result.data === null) return "(空)";
+  if (!result.ok) return result.error || failLabel;
+  if (result.data === undefined || result.data === null) return emptyLabel;
   if (typeof result.data === "string") return result.data;
   try {
     return JSON.stringify(result.data, null, 2);
@@ -72,18 +79,31 @@ function formatResult(result: ToolCallVizData["result"]): string {
 }
 
 export function ToolCallCard({ call }: { call: ToolCallVizData }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
+  const [rawView, setRawView] = useState(false);
   const summary = summaryForArgs(call.args);
   const adminLink = openInAdmin(call.args);
   const result = call.result;
   const pending = !result;
   const ok = result?.ok ?? null;
 
+  // read_page / read_section / read_block 的返回里带 markdown 正文（content 字段）——
+  // 渲染成 markdown 效果，而不是把整坨 JSON 塞进 <pre>。结构化工具（search / outline /
+  // backlinks…）没有 content、继续看原始 JSON。可用 raw/rendered 开关切回 JSON 调试。
+  const mdContent =
+    result?.ok &&
+    result.data &&
+    typeof result.data === "object" &&
+    typeof (result.data as { content?: unknown }).content === "string"
+      ? (result.data as { content: string }).content
+      : null;
+
   const status = pending
-    ? { label: "pending", color: "var(--amber)" }
+    ? { label: t("tool.pending"), color: "var(--amber)" }
     : ok
-      ? { label: "ok", color: "var(--emerald)" }
-      : { label: "fail", color: "var(--vermilion)" };
+      ? { label: t("tool.ok"), color: "var(--emerald)" }
+      : { label: t("tool.fail"), color: "var(--vermilion)" };
 
   const argEntries = Object.entries(call.args);
 
@@ -123,9 +143,9 @@ export function ToolCallCard({ call }: { call: ToolCallVizData }) {
         {call.synthetic && (
           <span
             className="k-stamp shrink-0 text-[var(--vermilion)]"
-            title="mode 自动增强（非 LLM 主动决定）"
+            title={t("tool.synthetic_tip")}
           >
-            forced
+            {t("tool.forced")}
           </span>
         )}
 
@@ -154,7 +174,7 @@ export function ToolCallCard({ call }: { call: ToolCallVizData }) {
           {/* 参数表 */}
           <div className="mb-4">
             <div className="k-eyebrow mb-2 flex items-center justify-between">
-              <span>args · {argEntries.length}</span>
+              <span>{t("tool.args", { n: argEntries.length })}</span>
               {adminLink && (
                 <a
                   href={adminLink}
@@ -162,13 +182,13 @@ export function ToolCallCard({ call }: { call: ToolCallVizData }) {
                   rel="noreferrer"
                   className="normal-case tracking-normal text-[var(--amber)] hover:underline"
                 >
-                  open in admin ↗
+                  {t("tool.open_admin")}
                 </a>
               )}
             </div>
             {argEntries.length === 0 ? (
               <div className="font-mono text-[11px] text-[var(--paper-mute)]">
-                (no args)
+                {t("tool.no_args")}
               </div>
             ) : (
               <dl className="k-kv">
@@ -182,17 +202,38 @@ export function ToolCallCard({ call }: { call: ToolCallVizData }) {
           {/* 结果 */}
           <div>
             <div className="k-eyebrow mb-2 flex items-center gap-2">
-              <span>result</span>
+              <span>{t("tool.result")}</span>
               <span
                 className="k-stamp text-[var(--paper-mute)]"
                 style={{ color: status.color, borderColor: status.color }}
               >
-                {pending ? "…calling" : ok ? "200 ok" : "failed"}
+                {pending
+                  ? t("tool.calling")
+                  : ok
+                    ? t("tool.result_ok")
+                    : t("tool.failed")}
               </span>
+              {mdContent && !pending && (
+                <button
+                  onClick={() => setRawView((v) => !v)}
+                  className="ml-auto normal-case tracking-normal text-[var(--amber)] hover:underline"
+                  title={t("tool.raw_toggle_tip")}
+                >
+                  {rawView ? t("tool.rendered") : t("tool.raw_json")}
+                </button>
+              )}
             </div>
-            <pre className="max-h-[400px] overflow-auto whitespace-pre-wrap break-words border border-[var(--line)] bg-[var(--ink)] p-3 font-mono text-[11.5px] leading-relaxed text-[var(--paper)]">
-              {pending ? "…" : formatResult(result)}
-            </pre>
+            {mdContent && !rawView && !pending ? (
+              <div className="markdown-body max-h-[400px] overflow-auto border border-[var(--line)] bg-[var(--ink)] p-3 text-[12.5px] leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{mdContent}</ReactMarkdown>
+              </div>
+            ) : (
+              <pre className="max-h-[400px] overflow-auto whitespace-pre-wrap break-words border border-[var(--line)] bg-[var(--ink)] p-3 font-mono text-[11.5px] leading-relaxed text-[var(--paper)]">
+                {pending
+                  ? "…"
+                  : formatResult(result, t("tool.call_failed"), t("tool.empty"))}
+              </pre>
+            )}
           </div>
         </div>
       )}

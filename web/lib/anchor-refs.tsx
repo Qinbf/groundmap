@@ -19,7 +19,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Components } from "react-markdown";
-import { extractTrailingAnchor } from "./markdown-render";
+import { extractTrailingAnchor, extractCodeBlockAnchor } from "./markdown-render";
 import { useT, useSelfRefs } from "./i18n-client";
 
 /**
@@ -308,11 +308,27 @@ function BareTableCell({ children }: { children?: ReactNode }) {
   return <td>{displayChildren}</td>;
 }
 
+// 围栏代码块：剥掉末行下沉的 ^c- 锚点（relocateCodeFenceAnchors 产物），只保留可见代码。
+// 不赋 id（bare 场景同主页面共存会重复 id）。inline code 原样透传。
+function BareCode({ children, className }: { children?: ReactNode; className?: string }) {
+  const text =
+    typeof children === "string"
+      ? children
+      : Array.isArray(children)
+      ? children.join("")
+      : "";
+  const isBlock = (!!className && /\blanguage-/.test(className)) || text.includes("\n");
+  if (!isBlock) return <code className={className}>{children}</code>;
+  const { display } = extractCodeBlockAnchor(text);
+  return <code className={className}>{display}</code>;
+}
+
 export const ANCHOR_COMPONENTS_BARE: Components = (() => {
   const map: Components = {
     p: BareParagraph,
     li: BareListItem,
     td: BareTableCell,
+    code: BareCode,
   };
   for (const lv of ANCHORED_HEADING_LEVELS) {
     (map as Record<string, unknown>)[`h${lv}`] = makeBareHeading(lv);

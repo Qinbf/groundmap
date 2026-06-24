@@ -2,6 +2,7 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ANCHOR_COMPONENTS_BARE } from "@/lib/anchor-refs";
+import { normalizeBlockAnchors } from "@/lib/markdown-render";
 
 /**
  * 小型 markdown 渲染器，供 hover preview / block 卡片等"局部 markdown"场景复用。
@@ -35,6 +36,16 @@ const COMPONENTS: Components = {
       </span>
     );
   },
+  // 表格在窄 popover（~28rem）里默认会被 prose 压缩到容器宽度，多列 CJK 表格被挤成
+  // 「每格一两个汉字竖排」的不可读状态。包一层 overflow-x-auto 让表格按内容自然宽度
+  // 横向滚动，单元格不再被腰斩。
+  table({ children }) {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-max max-w-none">{children}</table>
+      </div>
+    );
+  },
 };
 
 interface MiniMarkdownProps {
@@ -57,7 +68,7 @@ export function MiniMarkdown({ content, className }: MiniMarkdownProps) {
         urlTransform={NO_URL}
         components={COMPONENTS}
       >
-        {content}
+        {normalizeBlockAnchors(content)}
       </ReactMarkdown>
     </div>
   );

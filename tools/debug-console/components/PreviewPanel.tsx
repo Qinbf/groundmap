@@ -23,10 +23,16 @@ import {
   References,
   buildAnchorRegistry,
 } from "@/lib/anchor-refs";
+import { useT } from "@/lib/i18n-client";
+import type { TranslationKey } from "@/lib/i18n";
+
+type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
 interface Props {
   refData?: WikiRef | null;
   nodeData?: FlowNodeData | null;
+  /** 要查询的 workspace（须与答案一致，否则锚点对不上）；null = web 默认库 */
+  workspace?: string | null;
   onClose: () => void;
   onOpenRef: (ref: WikiRef) => void;
 }
@@ -46,7 +52,8 @@ type FetchState =
       fallback?: FallbackInfo;
     };
 
-export function PreviewPanel({ refData, nodeData, onClose, onOpenRef }: Props) {
+export function PreviewPanel({ refData, nodeData, workspace, onClose, onOpenRef }: Props) {
+  const t = useT();
   // 决定是否需要 fetch（refData 模式 或 nodeData 模式且 kind 是含 path 的 file/ghost/result）
   const fetchTarget: { tool: string; args: Record<string, unknown> } | null = (() => {
     if (refData) return refToToolCall(refData);
@@ -92,13 +99,13 @@ export function PreviewPanel({ refData, nodeData, onClose, onOpenRef }: Props) {
     fetch("/api/preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(fetchTarget),
+      body: JSON.stringify({ ...fetchTarget, workspace: workspace || undefined }),
     })
       .then((r) => r.json())
       .then((j) => {
         if (cancelled) return;
         if (!j.ok) {
-          setState({ kind: "error", message: j.error || "未知错误" });
+          setState({ kind: "error", message: j.error || t("preview.unknown_error") });
           return;
         }
         const fb =
@@ -121,6 +128,7 @@ export function PreviewPanel({ refData, nodeData, onClose, onOpenRef }: Props) {
   }, [
     fetchTarget?.tool,
     JSON.stringify(fetchTarget?.args ?? {}),
+    workspace,
   ]);
 
   return (
@@ -129,17 +137,17 @@ export function PreviewPanel({ refData, nodeData, onClose, onOpenRef }: Props) {
       <header className="flex items-start gap-2 border-b border-[var(--line)] bg-[var(--ink-2)] px-4 py-3">
         <div className="min-w-0 flex-1">
           <div className="k-eyebrow mb-1.5 flex items-center gap-2">
-            <span>preview</span>
+            <span>{t("preview.eyebrow")}</span>
             <span className="text-[var(--line-2)]">·</span>
             <span className="text-[var(--paper-dim)]">
-              {refData ? "wiki ref" : nodeData?.kind || "node"}
+              {refData ? t("preview.wiki_ref") : nodeData?.kind || t("preview.node")}
             </span>
           </div>
           {/* 节点类型 badge（仅 nodeData 模式）*/}
           {nodeData && !refData && (
             <div className="mb-1.5">
               <span className={kindBadgeClass(nodeData.kind)}>
-                {kindLabel(nodeData)}
+                {kindLabel(nodeData, t)}
               </span>
             </div>
           )}
@@ -159,13 +167,13 @@ export function PreviewPanel({ refData, nodeData, onClose, onOpenRef }: Props) {
                   className="mt-0.5 truncate font-mono text-[10px] text-[var(--amber-soft)]"
                   title={state.fallback.reason}
                 >
-                  ↘ fallback → {state.fallback.to}
+                  {t("preview.fallback", { to: state.fallback.to })}
                 </div>
               )}
             </>
           ) : (
             <div className="truncate font-mono text-[13px] font-semibold text-[var(--paper)]">
-              {nodeData?.title || "详情"}
+              {nodeData?.title || t("preview.details")}
             </div>
           )}
           {state.kind === "ok" && state.rendered.title && (
@@ -184,15 +192,15 @@ export function PreviewPanel({ refData, nodeData, onClose, onOpenRef }: Props) {
             target="_blank"
             rel="noreferrer"
             className="k-btn shrink-0"
-            title="在主管理台 (:3006) 打开"
+            title={t("preview.open_admin_tip")}
           >
-            open ↗
+            {t("preview.open")}
           </a>
         )}
         <button
           onClick={onClose}
           className="k-btn shrink-0"
-          title="关闭预览"
+          title={t("preview.close_tip")}
         >
           ✕
         </button>
@@ -216,12 +224,12 @@ export function PreviewPanel({ refData, nodeData, onClose, onOpenRef }: Props) {
                 <span className="k-thinking">
                   <span /><span /><span />
                 </span>
-                fetching…
+                {t("preview.fetching")}
               </div>
             )}
             {state.kind === "error" && (
               <div className="border border-[var(--vermilion)] bg-[var(--vermilion)]/10 p-3 font-mono text-[12px] text-[var(--vermilion)]">
-                <div className="k-eyebrow mb-1 text-[var(--vermilion)]">load failed</div>
+                <div className="k-eyebrow mb-1 text-[var(--vermilion)]">{t("preview.load_failed")}</div>
                 {state.message}
               </div>
             )}
@@ -356,10 +364,11 @@ function NodeInlineRender({
   node: FlowNodeData;
   onOpenRef: (ref: WikiRef) => void;
 }) {
+  const t = useT();
   if (node.kind === "query") {
     return (
       <section>
-        <div className="mb-1 text-xs text-slate-500">完整用户问题</div>
+        <div className="mb-1 text-xs text-slate-500">{t("preview.full_query")}</div>
         <div className="whitespace-pre-wrap rounded bg-slate-950/50 p-3 text-base text-slate-100">
           {node.body || node.subtitle || node.title}
         </div>
@@ -370,7 +379,7 @@ function NodeInlineRender({
     return (
       <section>
         <div className="mb-1 flex items-center gap-2 text-xs text-slate-500">
-          <span>步骤类型</span>
+          <span>{t("preview.step_type")}</span>
           <span className="rounded bg-purple-700 px-1.5 py-0.5 font-mono text-[10px] text-purple-100">
             {node.thoughtType || "?"}
           </span>
@@ -380,7 +389,7 @@ function NodeInlineRender({
         )}
         {node.body && (
           <>
-            <div className="mb-1 text-xs text-slate-500">完整思考内容</div>
+            <div className="mb-1 text-xs text-slate-500">{t("preview.full_reasoning")}</div>
             <RefAwareMarkdown
               text={node.body}
               onOpenRef={onOpenRef}
@@ -395,7 +404,7 @@ function NodeInlineRender({
     return (
       <section>
         <div className="mb-1 flex items-center gap-2 text-xs text-slate-500">
-          <span>✨ 最终答案</span>
+          <span>{t("flow.kind_result")}</span>
           {node.subtitle && <span className="text-slate-400">{node.subtitle}</span>}
         </div>
         {node.body && (
@@ -414,7 +423,7 @@ function NodeInlineRender({
         <div className="mb-2 rounded border-2 border-dashed border-red-500 bg-red-950/40 p-3">
           <div className="mb-2 flex items-center gap-2">
             <span className="rounded bg-red-700 px-2 py-0.5 text-[10px] font-mono uppercase text-red-100">
-              ⚠ INCOMPLETE
+              {t("preview.incomplete")}
             </span>
             <span className="text-base font-bold text-red-100">{node.title}</span>
           </div>
@@ -428,11 +437,8 @@ function NodeInlineRender({
           )}
         </div>
         <div className="rounded bg-cyan-950/40 p-3 text-xs text-cyan-200">
-          <div className="mb-1 font-bold">💡 操作建议</div>
-          <div>
-            回到 💬 对话 tab，发一条「<span className="font-mono bg-slate-900 px-1">请继续给最终 ANSWER 段总结</span>」追问。
-            AI 会基于已读到的内容补一个完整 ANSWER，流程图会自动出现 ✨ 最终答案卡片。
-          </div>
+          <div className="mb-1 font-bold">{t("preview.suggested_action")}</div>
+          <div>{t("preview.warn_body")}</div>
         </div>
       </section>
     );
@@ -441,23 +447,23 @@ function NodeInlineRender({
   return (
     <section>
       <div className="mb-1 text-xs text-slate-500">
-        工具调用：{node.toolName || node.title}
+        {t("preview.tool_call", { toolName: node.toolName || node.title })}
         {node.durationMs !== undefined && (
           <span className="ml-2 text-slate-500">{node.durationMs}ms</span>
         )}
-        <span className="ml-2 text-slate-500">状态：{node.status}</span>
+        <span className="ml-2 text-slate-500">{t("preview.status", { status: node.status })}</span>
       </div>
       {node.toolArgs && (
         <details className="mb-3" open>
-          <summary className="cursor-pointer text-xs text-slate-500">参数</summary>
+          <summary className="cursor-pointer text-xs text-slate-500">{t("preview.params")}</summary>
           <pre className="mt-1 overflow-auto whitespace-pre-wrap break-words rounded bg-slate-950/70 p-2 text-[10px] text-slate-300">
             {JSON.stringify(node.toolArgs, null, 2)}
           </pre>
         </details>
       )}
-      <div className="mb-1 text-xs text-slate-500">完整返回</div>
+      <div className="mb-1 text-xs text-slate-500">{t("preview.full_result")}</div>
       <pre className="overflow-auto whitespace-pre-wrap break-words rounded bg-slate-950/70 p-3 text-xs leading-relaxed text-slate-200">
-        {node.resultPreview || "(空)"}
+        {node.resultPreview || t("preview.empty")}
       </pre>
     </section>
   );
@@ -465,17 +471,18 @@ function NodeInlineRender({
 
 // 顶部条：file/ghost 节点 fetch 内容前先显示节点头部信息
 function FileNodeHeader({ node }: { node: FlowNodeData }) {
+  const t = useT();
   return (
     <section className="mb-3">
       {node.kind === "ghost" && (
         <div className="mb-2 rounded border border-amber-700 bg-amber-900/30 p-2 text-xs text-amber-200">
-          🫥 AI 在文本里提到过但**没真去读** —— 下面是完整内容，供你判断 AI 跳过这条路是否合理。
+          {t("preview.ghost_body")}
         </div>
       )}
       {node.kind === "file" && node.toolName && (
         <details className="mb-2">
           <summary className="cursor-pointer text-xs text-slate-500">
-            工具调用：{node.toolName} ({node.status})
+            {t("preview.tool_call_status", { toolName: node.toolName, status: node.status ?? "" })}
             {node.durationMs !== undefined && (
               <span className="ml-2">{node.durationMs}ms</span>
             )}
@@ -491,15 +498,15 @@ function FileNodeHeader({ node }: { node: FlowNodeData }) {
   );
 }
 
-function kindLabel(n: FlowNodeData): string {
+function kindLabel(n: FlowNodeData, t: TFn): string {
   switch (n.kind) {
-    case "query": return "💬 用户问题";
-    case "thought": return `🧠 ${n.thoughtType || "思考"}`;
+    case "query": return t("flow.kind_query");
+    case "thought": return `🧠 ${n.thoughtType || t("flow.kind_thought_fallback")}`;
     case "file": return `📄 ${n.fileType}`;
-    case "search": return "🔍 搜索";
-    case "list": return "📋 列表";
-    case "ghost": return "🫥 候选未读";
-    case "result": return "✨ 最终答案";
+    case "search": return t("flow.kind_search");
+    case "list": return t("flow.kind_list");
+    case "ghost": return t("flow.kind_ghost");
+    case "result": return t("flow.kind_result");
     default: return n.kind;
   }
 }

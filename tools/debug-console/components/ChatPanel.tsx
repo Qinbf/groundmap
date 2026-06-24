@@ -11,6 +11,7 @@ import type { WikiRef } from "@/lib/wiki-ref";
 import type { FlowNodeData } from "@/lib/build-flow-graph";
 import type { QueryMode } from "@/lib/default-system-prompt";
 import { FlowGraph } from "./FlowGraph";
+import { useT } from "@/lib/i18n-client";
 
 interface Props {
   provider: string;
@@ -18,12 +19,15 @@ interface Props {
   system: string;
   toolBudget: number;
   mode: QueryMode;
+  /** 要查询的 workspace（自动识别得来）；null = 让 web 用默认库 */
+  workspace: string | null;
   onOpenRef: (ref: WikiRef) => void;
   onOpenNode: (node: FlowNodeData) => void;
 }
 
 type IncomingEvent =
   | { kind: "text-delta"; text: string }
+  | { kind: "reasoning-delta"; text: string }
   | {
       kind: "tool-call";
       id: string;
@@ -51,22 +55,17 @@ type IncomingEvent =
   | { kind: "stream-end" }
   | { kind: "ref-validation"; broken: string[]; unread: string[]; downgraded?: string[] };
 
-const BOOT_LINES = [
-  "› init knowledge.console v0.3",
-  "› mount markdown + git filesystem … ok",
-  "› attach llm provider channel … ready",
-  "› awaiting query.",
-];
-
 export function ChatPanel({
   provider,
   model,
   system,
   toolBudget,
   mode,
+  workspace,
   onOpenRef,
   onOpenNode,
 }: Props) {
+  const t = useT();
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -102,6 +101,15 @@ export function ChatPanel({
           msg.parts[msg.parts.length - 1] = { kind: "text", text: last.text + evt.text };
         } else {
           msg.parts.push({ kind: "text", text: evt.text });
+        }
+      } else if (evt.kind === "reasoning-delta") {
+        // 推理增量：累积进同一个 reasoning part（与 text-delta 同构），
+        // 渲染为可折叠的「思考过程」区块，与正文分开。
+        const last = msg.parts[msg.parts.length - 1];
+        if (last && last.kind === "reasoning") {
+          msg.parts[msg.parts.length - 1] = { kind: "reasoning", text: last.text + evt.text };
+        } else {
+          msg.parts.push({ kind: "reasoning", text: evt.text });
         }
       } else if (evt.kind === "tool-call") {
         const call: ToolCallVizData = {
@@ -219,6 +227,7 @@ export function ChatPanel({
           messages: apiMessages,
           tool_budget: toolBudget,
           mode,
+          workspace: workspace || undefined,
         }),
         signal: ctrl.signal,
       });
@@ -292,6 +301,7 @@ export function ChatPanel({
     system,
     toolBudget,
     mode,
+    workspace,
   ]);
 
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -321,7 +331,7 @@ export function ChatPanel({
           }`}
         >
           <span className="font-mono">[01]</span>
-          <span className="ml-2 font-semibold">transcript</span>
+          <span className="ml-2 font-semibold">{t("chat.tab_transcript")}</span>
         </button>
         <button
           onClick={() => setView("flow")}
@@ -332,7 +342,7 @@ export function ChatPanel({
           }`}
         >
           <span className="font-mono">[02]</span>
-          <span className="ml-2 font-semibold">reasoning graph</span>
+          <span className="ml-2 font-semibold">{t("chat.tab_graph")}</span>
           {hasToolCalls && view !== "flow" && (
             <span className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-[var(--amber)] align-middle shadow-[0_0_6px_var(--amber)]" />
           )}
@@ -341,11 +351,15 @@ export function ChatPanel({
           {view === "flow" ? (
             <span>
               {latestAssistant
-                ? `last turn · ${latestAssistant.parts.filter((p) => p.kind === "tool-call").length} tool calls`
-                : "no turns yet"}
+                ? t("chat.lastturn", {
+                    n: latestAssistant.parts.filter(
+                      (p) => p.kind === "tool-call",
+                    ).length,
+                  })
+                : t("chat.noturns")}
             </span>
           ) : (
-            <span>turns · {userCount}</span>
+            <span>{t("chat.turns", { n: userCount })}</span>
           )}
         </div>
       </div>
@@ -399,7 +413,7 @@ export function ChatPanel({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKey}
-            placeholder="ask the knowledge base anything…"
+            placeholder={t("chat.placeholder")}
             rows={3}
             className="k-input flex-1 resize-none border-none bg-transparent text-[13px] leading-relaxed text-[var(--paper)] placeholder-[var(--paper-mute)] focus:bg-transparent focus:ring-0"
             style={{ borderColor: "transparent" }}
@@ -412,22 +426,22 @@ export function ChatPanel({
             disabled={busy || !input.trim()}
             className="k-btn k-btn-primary"
           >
-            {busy ? "▶ thinking" : "▶ dispatch"}
+            {busy ? t("chat.thinking") : t("chat.dispatch")}
           </button>
           {busy && (
             <button onClick={abort} className="k-btn">
-              ✕ abort
+              {t("chat.abort")}
             </button>
           )}
           <span className="text-[10.5px] uppercase tracking-[0.18em] text-[var(--paper-mute)]">
-            ⌘ + enter to send
+            {t("chat.send_hint")}
           </span>
           <button
             onClick={() => setMessages([])}
             disabled={busy}
             className="ml-auto text-[10.5px] uppercase tracking-[0.18em] text-[var(--paper-mute)] hover:text-[var(--vermilion)] disabled:opacity-40"
           >
-            clear log ⌫
+            {t("chat.clear")}
           </button>
         </div>
       </div>
@@ -436,19 +450,29 @@ export function ChatPanel({
 }
 
 function EmptyState() {
+  const t = useT();
+  const bootLines = [
+    t("chat.boot1"),
+    t("chat.boot2"),
+    t("chat.boot3"),
+    t("chat.boot4"),
+  ];
   return (
     <div className="mx-auto mt-8 max-w-2xl">
-      <div className="k-eyebrow mb-3">workbench · idle</div>
+      <div className="k-eyebrow mb-3">{t("chat.idle")}</div>
       <h2 className="k-display mb-8 text-5xl text-[var(--paper)]">
-        ready to <span className="k-display-italic text-[var(--amber)]">interrogate</span>
+        {t("chat.empty_pre")}{" "}
+        <span className="k-display-italic text-[var(--amber)]">
+          {t("chat.empty_em")}
+        </span>
         <br />
-        the knowledge base.
+        {t("chat.empty_post")}
       </h2>
 
       <div className="mb-8 border border-[var(--line)] bg-[var(--ink-2)]/40 p-5">
-        <div className="k-eyebrow mb-3">boot sequence</div>
+        <div className="k-eyebrow mb-3">{t("chat.boot")}</div>
         <div className="space-y-1 font-mono text-[12px] leading-relaxed text-[var(--paper-dim)]">
-          {BOOT_LINES.map((line, i) => (
+          {bootLines.map((line, i) => (
             <div
               key={i}
               className="k-boot-line"
@@ -465,19 +489,19 @@ function EmptyState() {
 
       <div className="grid grid-cols-3 gap-4 text-[11px]">
         <Hint
-          eyebrow="example"
-          title="谁在做 TikTok Shop 跨境合规？"
-          body="quick mode · 5–10 工具调用 · 单点事实查询"
+          eyebrow={t("chat.hint_example")}
+          title={t("chat.hint1_title")}
+          body={t("chat.hint1_body")}
         />
         <Hint
-          eyebrow="example"
-          title="对比 SHEIN 和 Temu 的获客策略"
-          body="explore mode · BFS outlinks · 综合多个 source"
+          eyebrow={t("chat.hint_example")}
+          title={t("chat.hint2_title")}
+          body={t("chat.hint2_body")}
         />
         <Hint
-          eyebrow="tip"
-          title="点工具卡片 / 流程图节点"
-          body="右侧分屏会展开该文件 / 段 / anchor 的实时内容"
+          eyebrow={t("chat.hint_tip")}
+          title={t("chat.hint3_title")}
+          body={t("chat.hint3_body")}
         />
       </div>
     </div>

@@ -2,9 +2,9 @@
 
 A strong public demo is the difference between "interesting architecture" and "I want to try this now".
 
-This repository already ships demo data as switchable workspaces under `workspaces/<name>/` (currently `smb-ecommerce`, `rag-evolution`, `ai-ml-demo`). Before public release, verify that every workspace contains only redistributable material (see [Release Checklist](release-checklist.md)).
+This repository ships **engine code only** — workspace data is created on demand by users. To get started, run `python scripts/k.py new-workspace my-research` and ingest your own content.
 
-> 📦 **The example workspaces' `raw/` source documents are not distributed** (copyright reasons; excluded by `.gitignore`). Their `wiki/` pages ship in full and are completely browsable. On a fresh clone, `k.py health` reports ~287 broken references ("raw 文件不存在" / raw file missing) — expected, not an installation failure. Any demo step that needs an actual raw document (conversion, anchor inspection) requires bringing your own redistributable source file.
+> 📦 **Workspace `raw/` source documents are not distributed** (copyright reasons; excluded by `.gitignore`). On a fresh clone, no workspace exists yet — create one with `k.py new-workspace <name>`. Any demo step that needs an actual raw document (conversion, anchor inspection) requires bringing your own redistributable source file.
 
 ## Demo Goals
 
@@ -56,26 +56,26 @@ workspaces/<name>/
 └── log.md
 ```
 
-The packaged CLI does not exist yet. Until it does, drive the demo against an existing workspace (default `smb-ecommerce`). All of the following work on a fresh clone — they only read the bundled `wiki/` pages:
+The packaged CLI does not exist yet. Until it does, drive the demo against an existing workspace (default `my-research`). All of the following work on a fresh clone — they only read the bundled `wiki/` pages:
 
 ```bash
 # k.py path arguments are workspace-relative
-python scripts/k.py --workspace smb-ecommerce search "cross-border"
-python scripts/k.py --workspace smb-ecommerce outline wiki/sources/cac_ec_law_2018.md
-python scripts/k.py --workspace smb-ecommerce read-section wiki/sources/cac_ec_law_2018.md "核心条款"
-python scripts/k.py --workspace smb-ecommerce health --json
-cd web && KB_WORKSPACE=smb-ecommerce npm run dev
+python scripts/k.py --workspace my-research search "cross-border"
+python scripts/k.py --workspace my-research outline wiki/sources/cac_ec_law_2018.md
+python scripts/k.py --workspace my-research read-section wiki/sources/cac_ec_law_2018.md "核心条款"
+python scripts/k.py --workspace my-research health --json
+cd web && KB_WORKSPACE=my-research npm run dev
 ```
 
 To demo the conversion step (raw document → anchored markdown), bring your own redistributable source file first — the bundled workspaces ship without `raw/`:
 
 ```bash
-mkdir -p workspaces/smb-ecommerce/raw/articles
-cp /path/to/my_article.html workspaces/smb-ecommerce/raw/articles/
+mkdir -p workspaces/my-research/raw/articles
+cp /path/to/my_article.html workspaces/my-research/raw/articles/
 
 # convert.py --dir is repo-relative
-python scripts/convert.py --dir workspaces/smb-ecommerce/raw/articles --ext .html
-python scripts/k.py --workspace smb-ecommerce outline raw/articles/my_article.md
+python scripts/convert.py --dir workspaces/my-research/raw/articles --ext .html
+python scripts/k.py --workspace my-research outline raw/articles/my_article.md
 ```
 
 ## Demo Script

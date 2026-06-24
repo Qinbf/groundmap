@@ -6,15 +6,18 @@
  * - 流式时光标改 amber 方块
  * - 参考列表改印刷脚注 (numbered, mono, hairline rule)
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ToolCallCard, type ToolCallVizData } from "./ToolCallCard";
+import { useLocale, useT } from "@/lib/i18n-client";
+import type { TranslationKey } from "@/lib/i18n";
 import {
   collectRefs,
   downgradeRefAnchors,
   hrefToRef,
   inlineWikiRefsNumbered,
+  neutralizeBrokenRefs,
   refDisplayText,
   refToHref,
   type WikiRef,
@@ -22,6 +25,7 @@ import {
 
 export type MessagePart =
   | { kind: "text"; text: string }
+  | { kind: "reasoning"; text: string }
   | { kind: "tool-call"; call: ToolCallVizData };
 
 export interface UIMessage {
@@ -41,12 +45,46 @@ export interface UIMessage {
   };
 }
 
-const ROLE_LABEL: Record<UIMessage["role"], string> = {
-  user: "you · query",
-  assistant: "kb · response",
-  system: "system",
-  error: "fault",
+const ROLE_LABEL_KEY: Record<UIMessage["role"], TranslationKey> = {
+  user: "msg.role_user",
+  assistant: "msg.role_assistant",
+  system: "msg.role_system",
+  error: "msg.role_error",
 };
+
+/**
+ * 思考过程区块 — 推理模型（DeepSeek deepseek-v4 等）的 reasoning_content。
+ * 默认展开（思考时让用户看到「在想」），可手动折叠；与正文 text 分开渲染。
+ */
+function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
+  const t = useT();
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="mb-3 max-w-[68ch] border-l-2 border-[var(--line)] pl-3">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 text-[10.5px] uppercase tracking-[0.16em] text-[var(--paper-mute)] transition-colors hover:text-[var(--paper-dim)]"
+      >
+        {live ? (
+          <span className="k-thinking">
+            <span />
+            <span />
+            <span />
+          </span>
+        ) : (
+          <span className="text-[var(--amber)]">💭</span>
+        )}
+        <span>{live ? t("msg.reasoning_live") : t("msg.reasoning_title")}</span>
+        <span className="font-mono">{open ? "[−]" : "[+]"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 whitespace-pre-wrap text-[12px] italic leading-relaxed text-[var(--paper-mute)]">
+          {text}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function MessageBubble({
   msg,
@@ -57,6 +95,8 @@ export function MessageBubble({
   index?: number;
   onOpenRef: (ref: WikiRef) => void;
 }) {
+  const t = useT();
+  const { locale } = useLocale();
   const isUser = msg.role === "user";
   const isError = msg.role === "error";
   const isAssistant = msg.role === "assistant";
@@ -66,12 +106,27 @@ export function MessageBubble({
     () => new Set(msg.refValidation?.downgraded ?? []),
     [msg.refValidation],
   );
+  // 后验判定"当前库根本不存在"的引用 → 渲染前去链接化（杜绝点开即 404 的假来源）
+  const brokenSet = useMemo(
+    () => new Set(msg.refValidation?.broken ?? []),
+    [msg.refValidation],
+  );
+  // 统一的渲染前清洗：先降级不支撑论断的锚点，再去链接化不存在的引用
+  const cleanRefs = useMemo(
+    () => (text: string) =>
+      neutralizeBrokenRefs(
+        downgradeRefAnchors(text, downgradedSet),
+        brokenSet,
+        locale,
+      ),
+    [downgradedSet, brokenSet, locale],
+  );
   const numberedRefs = useMemo(() => {
     const texts = msg.parts
       .filter((p): p is { kind: "text"; text: string } => p.kind === "text")
-      .map((p) => downgradeRefAnchors(p.text, downgradedSet));
+      .map((p) => cleanRefs(p.text));
     return collectRefs(texts);
-  }, [msg.parts, downgradedSet]);
+  }, [msg.parts, cleanRefs]);
   const refMap = useMemo(
     () => new Map(numberedRefs.map((r) => [r.key, r.n])),
     [numberedRefs],
@@ -97,12 +152,12 @@ export function MessageBubble({
                 : "text-[var(--paper)]"
           }`}
         >
-          {seq} · {ROLE_LABEL[msg.role]}
+          {seq} · {t(ROLE_LABEL_KEY[msg.role])}
         </span>
         {msg.streaming && (
           <span className="ml-1 inline-flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.16em] text-[var(--amber)]">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--amber)] shadow-[0_0_6px_var(--amber)]" />
-            streaming
+            {t("msg.streaming")}
           </span>
         )}
       </div>
@@ -167,9 +222,18 @@ export function MessageBubble({
                   },
                 }}
               >
-                {inlineWikiRefsNumbered(downgradeRefAnchors(part.text, downgradedSet), refMap)}
+                {inlineWikiRefsNumbered(cleanRefs(part.text), refMap)}
               </ReactMarkdown>
             </div>
+          );
+        }
+        if (part.kind === "reasoning") {
+          return (
+            <ReasoningBlock
+              key={i}
+              text={part.text}
+              live={!!msg.streaming && i === msg.parts.length - 1}
+            />
           );
         }
         return <ToolCallCard key={part.call.id} call={part.call} />;
@@ -183,7 +247,7 @@ export function MessageBubble({
       {/* assistant 的参考列表（脚注样式） */}
       {isAssistant && numberedRefs.length > 0 && (
         <div className="mt-4 max-w-[68ch] border-t border-dashed border-[var(--line)] pt-3">
-          <div className="k-eyebrow mb-2">references · {numberedRefs.length}</div>
+          <div className="k-eyebrow mb-2">{t("msg.refs", { n: numberedRefs.length })}</div>
           <ol className="space-y-1">
             {numberedRefs.map((r) => (
               <li
@@ -215,7 +279,10 @@ export function MessageBubble({
         <div className="mt-3 max-w-[68ch] space-y-2">
           {msg.refValidation.broken.length > 0 && (
             <div className="border border-[var(--vermilion)] bg-[var(--vermilion)]/10 p-2.5">
-              <div className="k-eyebrow mb-1.5 text-[var(--vermilion)]">broken refs · {msg.refValidation.broken.length}</div>
+              <div className="k-eyebrow mb-1.5 text-[var(--vermilion)]">{t("msg.broken_refs", { n: msg.refValidation.broken.length })}</div>
+              <div className="mb-1.5 text-[10.5px] text-[var(--paper-dim)]">
+                {t("msg.broken_desc")}
+              </div>
               <div className="space-y-1 font-mono text-[10.5px] text-[var(--paper-dim)]">
                 {msg.refValidation.broken.map((p) => (
                   <div key={p} className="flex items-baseline gap-2">
@@ -228,7 +295,7 @@ export function MessageBubble({
           )}
           {msg.refValidation.unread.length > 0 && (
             <div className="border border-[var(--amber)] bg-[var(--amber)]/10 p-2.5">
-              <div className="k-eyebrow mb-1.5 text-[var(--amber)]">unverified refs · {msg.refValidation.unread.length}</div>
+              <div className="k-eyebrow mb-1.5 text-[var(--amber)]">{t("msg.unverified_refs", { n: msg.refValidation.unread.length })}</div>
               <div className="space-y-1 font-mono text-[10.5px] text-[var(--paper-dim)]">
                 {msg.refValidation.unread.map((p) => (
                   <div key={p} className="flex items-baseline gap-2">
@@ -242,10 +309,10 @@ export function MessageBubble({
           {(msg.refValidation.downgraded?.length ?? 0) > 0 && (
             <div className="border border-[var(--amber)] bg-[var(--amber)]/10 p-2.5">
               <div className="k-eyebrow mb-1.5 text-[var(--amber)]">
-                downgraded refs · {msg.refValidation.downgraded!.length}
+                {t("msg.downgraded_refs", { n: msg.refValidation.downgraded!.length })}
               </div>
               <div className="mb-1.5 text-[10.5px] text-[var(--paper-dim)]">
-                这些块锚点的内容不支撑对应论断，已自动降级为整页链接（去掉假精度）。
+                {t("msg.downgraded_desc")}
               </div>
               <div className="space-y-1 font-mono text-[10.5px] text-[var(--paper-dim)]">
                 {msg.refValidation.downgraded!.map((k) => (
@@ -263,7 +330,7 @@ export function MessageBubble({
       {/* turn 结束原因（非 stop）*/}
       {msg.end_reason && msg.end_reason !== "stop" && (
         <div className="mt-3 inline-flex items-center gap-2 border border-[var(--vermilion)] bg-[var(--vermilion)]/10 px-2.5 py-1 text-[10.5px] uppercase tracking-[0.16em] text-[var(--vermilion)]">
-          <span>⚠ end · {msg.end_reason}</span>
+          <span>{t("msg.end", { reason: msg.end_reason })}</span>
           {msg.end_error && (
             <span className="normal-case tracking-normal text-[var(--paper-dim)]">
               — {msg.end_error}

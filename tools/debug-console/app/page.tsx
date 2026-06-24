@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ProviderPicker } from "@/components/ProviderPicker";
 import { ModePicker } from "@/components/ModePicker";
+import { WorkspaceIndicator } from "@/components/WorkspaceIndicator";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { PreviewPanel } from "@/components/PreviewPanel";
+import { useT } from "@/lib/i18n-client";
 import type { WikiRef } from "@/lib/wiki-ref";
 import type { FlowNodeData } from "@/lib/build-flow-graph";
 import {
@@ -13,6 +16,7 @@ import {
 } from "@/lib/default-system-prompt";
 
 export default function Page() {
+  const t = useT();
   const [provider, setProvider] = useState("claude-code");
   const [model, setModel] = useState("default");
   const [mode, setMode] = useState<QueryMode>("quick");
@@ -26,6 +30,10 @@ export default function Page() {
   const [previewRef, setPreviewRef] = useState<WikiRef | null>(null);
   const [previewNode, setPreviewNode] = useState<FlowNodeData | null>(null);
   const hasPreview = !!previewRef || !!previewNode;
+
+  // 要查的库：?ws 参数（web 顶栏点进来时带，反映 web 当前所在库）> web 当前默认库。
+  // 控制台是 web 的外部客户端，**不**提供独立切换——避免控制台查的库与 web 浏览的库不一致。
+  const [workspace, setWorkspace] = useState<string | null>(null);
 
   const openRef = (r: WikiRef) => {
     setPreviewNode(null);
@@ -48,6 +56,29 @@ export default function Page() {
     }
   }, [mode, systemDirty, budgetDirty]);
 
+  // 进页面时解析活动 workspace：?ws 参数（web 传入）> web 当前库。不读写 localStorage、不可切换。
+  useEffect(() => {
+    const WS_RE = /^[A-Za-z0-9_-]+$/;
+    const fromUrl = new URLSearchParams(window.location.search).get("ws");
+    fetch("/api/workspaces")
+      .then((r) => r.json())
+      .then((d: { workspaces?: unknown; current?: unknown }) => {
+        const list = Array.isArray(d.workspaces) ? (d.workspaces as string[]) : [];
+        const valid = (w: string | null): w is string =>
+          !!w && WS_RE.test(w) && list.includes(w);
+        const chosen = valid(fromUrl)
+          ? fromUrl
+          : typeof d.current === "string"
+            ? d.current
+            : null;
+        setWorkspace(chosen);
+      })
+      .catch(() => {
+        // 库列表取不到（web 没起）：用 ?ws 兜底，web 端会再校验一次 cookie
+        setWorkspace(fromUrl && WS_RE.test(fromUrl) ? fromUrl : null);
+      });
+  }, []);
+
   return (
     <main className="kc-stage flex h-screen flex-col">
       {/* ─── 顶栏 chrome ─── */}
@@ -56,7 +87,7 @@ export default function Page() {
         <div className="flex flex-wrap items-end justify-between gap-6 px-6 pt-5 pb-3">
           <div className="flex items-end gap-3">
             <div className="leading-none">
-              <div className="k-eyebrow mb-1.5">vol. 01 · debug workbench</div>
+              <div className="k-eyebrow mb-1.5">{t("header.eyebrow")}</div>
               <h1 className="k-display text-[2.4rem] text-[var(--paper)]">
                 Knowledge<span className="text-[var(--amber)]">.</span>
                 <span className="k-display-italic font-light text-[var(--paper-dim)]">Console</span>
@@ -64,14 +95,15 @@ export default function Page() {
             </div>
             <span
               className="mb-2 inline-block"
-              aria-label="live"
-              title="live workbench"
+              aria-label={t("header.live")}
+              title={t("header.live_workbench")}
             >
               <span className="k-tick" />
             </span>
           </div>
 
           <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
+            <WorkspaceIndicator value={workspace} />
             <ProviderPicker
               provider={provider}
               model={model}
@@ -82,7 +114,7 @@ export default function Page() {
             />
             <ModePicker mode={mode} onChange={setMode} />
             <div className="flex flex-col gap-1">
-              <span className="k-eyebrow">budget</span>
+              <span className="k-eyebrow">{t("header.budget")}</span>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -99,7 +131,7 @@ export default function Page() {
                   <button
                     onClick={() => setBudgetDirty(false)}
                     className="text-xs text-[var(--paper-mute)] hover:text-[var(--amber)]"
-                    title="恢复跟随模式的默认预算"
+                    title={t("header.budget_reset")}
                   >
                     ↺
                   </button>
@@ -109,20 +141,21 @@ export default function Page() {
             <button
               onClick={() => setShowSystem(!showSystem)}
               className="k-btn"
-              title="编辑 system prompt"
+              title={t("header.edit_prompt")}
             >
               {showSystem ? "▼ prompt" : "▸ prompt"}
             </button>
+            <LocaleSwitcher />
           </div>
         </div>
 
         {/* 副行：ruled 信息条 */}
         <div className="flex items-center gap-4 border-t border-[var(--line)]/60 px-6 py-2 text-[10.5px] uppercase tracking-[0.18em] text-[var(--paper-mute)]">
-          <span>knowledge base · markdown + git</span>
+          <span>{t("header.bar_kb")}</span>
           <span className="text-[var(--line-2)]">/</span>
-          <span>llm reasoning + tool calls · live trace</span>
+          <span>{t("header.bar_llm")}</span>
           <span className="ml-auto flex items-center gap-2">
-            <span>open-source</span>
+            <span>{t("header.bar_opensource")}</span>
             <span className="text-[var(--line-2)]">·</span>
             <span className="text-[var(--paper-dim)]">groundmap</span>
           </span>
@@ -143,11 +176,11 @@ export default function Page() {
                 }}
                 className="text-[11px] text-[var(--amber)] hover:underline"
               >
-                ↺ reset to mode default ({mode})
+                {t("header.prompt_reset", { mode })}
               </button>
             ) : (
               <span className="text-[11px] text-[var(--paper-mute)]">
-                following mode = {mode}
+                {t("header.prompt_following", { mode })}
               </span>
             )}
           </div>
@@ -176,6 +209,7 @@ export default function Page() {
             system={system}
             toolBudget={toolBudget}
             mode={mode}
+            workspace={workspace}
             onOpenRef={openRef}
             onOpenNode={openNode}
           />
@@ -185,6 +219,7 @@ export default function Page() {
             <PreviewPanel
               refData={previewRef}
               nodeData={previewNode}
+              workspace={workspace}
               onClose={closePreview}
               onOpenRef={openRef}
             />
