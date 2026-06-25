@@ -72,6 +72,10 @@ export function ChatPanel({
   const [view, setView] = useState<"chat" | "flow">("chat");
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // 「黏底」状态：仅当用户已经在底部时，流式增量才自动滚到底；
+  // 一旦用户往上滚查看历史，就停止自动滚动，避免被流式输出一直往下拽。
+  const stickToBottomRef = useRef(true);
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
 
   const latestAssistant =
     [...messages].reverse().find((m) => m.role === "assistant") || null;
@@ -85,9 +89,31 @@ export function ChatPanel({
       .map((p) => (p as { text: string }).text)
       .join("") || null;
 
+  // 流式增量到来时：只有「黏底」时才自动滚到底，否则保持用户当前阅读位置不动。
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    if (!stickToBottomRef.current) return;
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight });
   }, [messages]);
+
+  // 监听用户滚动：距底 < 80px 视为「在底部」→ 继续黏底；往上滚则脱离黏底并显示「回到最新」。
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distanceFromBottom < 80;
+    stickToBottomRef.current = atBottom;
+    setShowJumpToBottom(!atBottom);
+  }, []);
+
+  const jumpToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // 瞬时滚到底（非 smooth）——避免滚动动画途中 onScroll 把按钮短暂闪回。
+    el.scrollTo({ top: el.scrollHeight });
+    stickToBottomRef.current = true;
+    setShowJumpToBottom(false);
+  }, []);
 
   const applyEvent = useCallback((assistantId: string, evt: IncomingEvent) => {
     setMessages((prev) => {
@@ -196,6 +222,9 @@ export function ChatPanel({
       streaming: true,
     };
 
+    // 新一轮开始：用户主动发送，重新黏底，让本轮内容滚入视野。
+    stickToBottomRef.current = true;
+    setShowJumpToBottom(false);
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     setInput("");
     setBusy(true);
@@ -366,30 +395,40 @@ export function ChatPanel({
 
       {/* ─── 主区 ─── */}
       {view === "chat" ? (
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto px-7 py-6"
-          style={{ minHeight: 0 }}
-        >
-          {messages.length === 0 && <EmptyState />}
-          {messages.map((m, idx) => (
-            <MessageBubble
-              key={m.id}
-              msg={m}
-              index={
-                m.role === "user"
-                  ? messages
-                      .slice(0, idx + 1)
-                      .filter((x) => x.role === "user").length
-                  : m.role === "assistant"
+        <div className="relative flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="h-full overflow-y-auto px-7 py-6"
+          >
+            {messages.length === 0 && <EmptyState />}
+            {messages.map((m, idx) => (
+              <MessageBubble
+                key={m.id}
+                msg={m}
+                index={
+                  m.role === "user"
                     ? messages
                         .slice(0, idx + 1)
-                        .filter((x) => x.role === "assistant").length
-                    : 0
-              }
-              onOpenRef={onOpenRef}
-            />
-          ))}
+                        .filter((x) => x.role === "user").length
+                    : m.role === "assistant"
+                      ? messages
+                          .slice(0, idx + 1)
+                          .filter((x) => x.role === "assistant").length
+                      : 0
+                }
+                onOpenRef={onOpenRef}
+              />
+            ))}
+          </div>
+          {showJumpToBottom && (
+            <button
+              onClick={jumpToBottom}
+              className="absolute bottom-4 right-6 z-10 border border-[var(--amber)]/60 bg-[var(--ink-2)]/90 px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--amber)] shadow-lg backdrop-blur transition-colors hover:bg-[var(--amber)] hover:text-[var(--ink)]"
+            >
+              {t("chat.jump_to_latest")}
+            </button>
+          )}
         </div>
       ) : (
         <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>

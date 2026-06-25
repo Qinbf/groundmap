@@ -510,7 +510,9 @@ main,
   from { opacity: 0; stroke-dashoffset: 20; }
   to { opacity: 1; stroke-dashoffset: 0; }
 }
-.react-flow__edge-path {
+/* 仅对「非流动」连线做一次性淡入；流动（animated）连线交给 react-flow 的蚂蚁线动画，
+   两者都改 stroke-dashoffset，叠加会让流动闪烁/卡顿，故此处用 :not(.animated) 隔离。 */
+.react-flow__edge:not(.animated) .react-flow__edge-path {
   animation: edgeFadeIn 0.5s ease-out;
 }
 

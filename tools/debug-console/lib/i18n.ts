@@ -78,6 +78,7 @@ export const TRANSLATIONS = {
     "chat.abort": "✕ 中止",
     "chat.send_hint": "⌘ + enter 发送",
     "chat.clear": "清空记录 ⌫",
+    "chat.jump_to_latest": "↓ 回到最新",
     // 空状态
     "chat.idle": "工作台 · 空闲",
     "chat.empty_pre": "准备好",
@@ -298,6 +299,7 @@ export const TRANSLATIONS = {
     "chat.abort": "✕ abort",
     "chat.send_hint": "⌘ + enter to send",
     "chat.clear": "clear log ⌫",
+    "chat.jump_to_latest": "↓ jump to latest",
     // Empty state
     "chat.idle": "workbench · idle",
     "chat.empty_pre": "ready to",

@@ -278,13 +278,16 @@ function renderGhost(data: FlowNodeData, clickable: boolean, t: TFn) {
 function renderTool(data: FlowNodeData, clickable: boolean, t: TFn) {
   const palette = FILE_COLOR[data.fileType] || FILE_COLOR.unknown;
   const pending = data.status === "pending";
+  // 进行中：用静态高亮环（不再用 pulse-ring / shimmer 循环动画）——避免推理图「一直闪」。
+  // 「是否在跑」由右上角小 spinner 表达即可。
   const statusClass = pending
-    ? "ring-2 ring-yellow-400/70 animate-pulse-ring node-shimmer"
+    ? "ring-2 ring-yellow-400/70"
     : data.status === "error"
       ? "border-dashed !border-red-500"
       : "";
+  // 最新活跃节点：静态 cyan 环标识当前位置，不做呼吸光晕（node-active-glow）动画——不闪。
   const activeGlow = (data as FlowNodeData & { isLatestActive?: boolean }).isLatestActive
-    ? "node-active-glow ring-2 ring-cyan-400/60"
+    ? "ring-2 ring-cyan-400/60"
     : "";
   // synthetic 节点（mode 自动增强）—— 橙色虚线边 + 紧凑尺寸
   const syntheticClass = data.synthetic
