@@ -55,7 +55,7 @@ Use the optional debug console to inspect agent reasoning, tool calls, and groun
 Requirements:
 
 - Python 3.10+
-- Node.js 20+
+- Node.js 22+
 - npm
 
 ```bash
@@ -70,6 +70,34 @@ make web
 Then open [http://localhost:3006](http://localhost:3006).
 
 > 📦 **Example `raw/` sources are not distributed with this repository** (copyright reasons; `workspaces/*/raw/` is excluded by `.gitignore`). The example workspaces ship their full `wiki/` pages, which remain completely browsable. After a fresh clone, `k.py health` reports nonzero **broken references** (across the example workspaces — "raw 文件不存在" / raw file missing) and **source issues** (`broken-source-link`: `source_summary` pages cite `[[raw/...]]` blocks that aren't present) — **both are expected and do not mean your installation failed**; they are the same raw-absent artifact, only the deep links into missing raw blocks are unresolved. To exercise the full convert → cite loop, ingest your own documents into a workspace's `raw/`.
+
+## Use It With Your Own Documents
+
+The recommended real-world workflow is: clone GroundMap as the engine, prepare your source documents yourself, create a new workspace, then ask Claude Code, Codex, or another coding agent to ingest those files into the knowledge base.
+
+For private or copyrighted documents, keep your data outside the public engine repo and point GroundMap at it with `KB_ROOT`:
+
+```bash
+mkdir -p ~/work/my-kb-data/workspaces
+KB_ROOT=~/work/my-kb-data python scripts/k.py new-workspace my-research
+mkdir -p ~/work/my-kb-data/workspaces/my-research/raw/papers
+# Put your PDFs, HTML files, Word docs, or Markdown files into raw/papers/ or raw/articles/ yourself.
+```
+
+Then start your agent in this repository and give it a concrete instruction, for example:
+
+```text
+Read AGENTS.md first. Use KB_ROOT=~/work/my-kb-data and workspace my-research.
+I put source documents under raw/papers/. Please ingest them into the knowledge base,
+update the relevant wiki pages and indexes, run the health/lint checks, and summarize what changed.
+```
+
+To browse the result:
+
+```bash
+cd web
+KB_ROOT=~/work/my-kb-data KB_WORKSPACE=my-research npm run dev
+```
 
 Manual setup:
 

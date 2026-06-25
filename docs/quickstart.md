@@ -9,7 +9,7 @@ Hands-on companion examples live under `docs/examples/`; a step-by-step illustra
 ## Requirements
 
 - Python 3.10+
-- Node.js 20+
+- Node.js 22+
 - npm
 - Git
 
@@ -78,6 +78,61 @@ python scripts/k.py new-workspace my-research
 ```
 
 To see the canonical workspace data layout and convention, look at `wiki/_templates/` (engine-level templates, not workspace data) or read `scripts/k.py new-workspace --help`.
+
+## Recommended: Build Your Own Knowledge Base With an Agent
+
+The best first real workflow is to treat GroundMap as the reusable engine and keep your own source documents in a workspace that an external coding agent manages for you.
+
+For non-sensitive experiments, an in-repo workspace is fine:
+
+```bash
+python scripts/k.py new-workspace my-research
+mkdir -p workspaces/my-research/raw/papers
+# Put your own PDFs, HTML files, Word docs, or Markdown files here.
+```
+
+For private, copyrighted, or client-specific documents, prefer a separate data root via `KB_ROOT` so the open-source engine repo stays clean:
+
+```bash
+mkdir -p ~/work/my-kb-data/workspaces
+KB_ROOT=~/work/my-kb-data python scripts/k.py new-workspace my-research
+mkdir -p ~/work/my-kb-data/workspaces/my-research/raw/papers
+# Put your own PDFs, HTML files, Word docs, or Markdown files here.
+```
+
+Then start Claude Code, Codex, Cursor-style agents, or another coding agent from the GroundMap repository and give it an explicit instruction like:
+
+```text
+Read AGENTS.md first. Use KB_ROOT=~/work/my-kb-data and workspace my-research.
+I placed source documents under raw/papers/.
+Please ingest them into the knowledge base:
+- convert the raw files,
+- create source summaries with block-level citations,
+- update the relevant concept/entity/index pages,
+- run list-bare-claims, list-coarse-citations, list-source-issues, list-broken-refs, and list-relation-issues,
+- run health,
+- summarize what changed.
+```
+
+The important split is:
+
+- You place original documents under `raw/articles/` or `raw/papers/`.
+- The agent reads `AGENTS.md`, runs `scripts/convert.py` and `scripts/k.py`, writes `wiki/**`, and keeps citations anchored.
+- GroundMap itself never calls an LLM; the agent performs the reasoning outside the knowledge base.
+
+Browse the resulting workspace with:
+
+```bash
+cd web
+KB_ROOT=~/work/my-kb-data KB_WORKSPACE=my-research npm run dev
+```
+
+If you created the workspace inside the engine repo instead, omit `KB_ROOT`:
+
+```bash
+cd web
+KB_WORKSPACE=my-research npm run dev
+```
 
 ## Explore the CLI
 
