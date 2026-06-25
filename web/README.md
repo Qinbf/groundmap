@@ -25,8 +25,6 @@ npm run dev     # 端口 3006
 | `/health` | 健康度仪表板 |
 | `/health/{conflicts,orphans,to-update,broken-refs,stale-drafts,low-confidence}` | 六个问题工作台（多数含一键决议；broken-refs 仅列表，需去编辑页改引用） |
 | `/graph` | 类型化关系图谱（React Flow，节点按 type、边按关系类型染色） |
-| `/learn` | 交互式教学（ingest / query 工作流演示） |
-| `/walkthrough` | 查询讲解（真实运行记录的逐步回放，目前仅中文） |
 
 ## API（内部）
 
