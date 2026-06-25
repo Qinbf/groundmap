@@ -190,6 +190,12 @@ GroundMap 刻意不包含：
 - [Demo 方案](docs/demo.md)
 - [Web 管理台](web/README.md)
 
+## 学习与交流
+
+想持续关注前沿 AI 技术与应用、AI 与科研结合的案例，以及 GroundMap / 智能体工作流实践，可以关注作者个人公众号：**覃秉丰AI**。公众号也会发布 GroundMap 教程、实践案例和相关学习资源。
+
+<img src="docs/images/community/qinbf-ai-wechat.png" alt="微信公众号：覃秉丰AI" width="560">
+
 ## 路线图
 
 - 带可再分发来源的公开演示 workspace。

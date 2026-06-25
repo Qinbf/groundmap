@@ -190,6 +190,12 @@ Those boundaries are deliberate. The open-source core focuses on the durable kno
 - [Demo Plan](docs/demo.md)
 - [Web Console](web/README.md)
 
+## Creator Updates
+
+For Chinese-language notes on frontier AI technology, practical AI applications, and research-oriented AI agent workflows, follow the author's WeChat Official Account: **覃秉丰AI**. It also shares GroundMap tutorials, case studies, and related learning resources.
+
+<img src="docs/images/community/qinbf-ai-wechat.png" alt="WeChat Official Account: 覃秉丰AI" width="560">
+
 ## Roadmap
 
 - Public demo workspace with redistributable sources.
