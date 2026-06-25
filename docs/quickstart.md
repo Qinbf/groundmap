@@ -16,7 +16,7 @@ Hands-on companion examples live under `docs/examples/`; a step-by-step illustra
 ## Install
 
 ```bash
-git clone https://github.com/your-org/groundmap.git
+git clone https://github.com/Qinbf/groundmap.git
 cd groundmap
 make setup
 ```
