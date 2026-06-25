@@ -27,7 +27,7 @@ tags:
 
 ## 定义 ^h-2-1-307d15
 
-**Retrieval-Augmented Generation (RAG)** 是给 LM 的输入 prompt 前面附加"从外部知识库检索到的相关文段"的范式,目的是缓解 LM 的参数化知识陈旧、虚构(hallucination)、缺少 citation 的问题。最早系统性定义来自 Lewis et al. (2020)[[wiki/sources/self_rag#^p-11-991291]]。 ^p-2-ebb839
+**Retrieval-Augmented Generation (RAG)** 是给 LM 的输入 prompt 前面附加"从外部知识库检索到的相关文段"的范式,目的是缓解 LM 的参数化知识陈旧、虚构(hallucination)、缺少 citation 的问题。最早系统性定义来自 Lewis et al. (2020)[[raw/papers/2023-10-self-rag#^p-11-991291]]。 ^p-2-ebb839
 
 ## 基本组件 ^h-2-2-ff0a40
 
@@ -40,7 +40,7 @@ tags:
 根据 [[wiki/sources/self_rag]] 的归纳,标准 RAG 有两大缺陷:
 
 1. **不分场合一律检索固定数量**:即使 query 不需要外部知识(如常识问答 / 创意写作),也会检索 top-K,引入噪声并浪费计算
-2. **生成不保证 grounded**:LM 拿到 passages 后没机制强制它用这些 passages 生成,导致 citation 错位或事实虚构[[wiki/sources/self_rag#^p-11-991291]] ^p-4-f9f601
+2. **生成不保证 grounded**:LM 拿到 passages 后没机制强制它用这些 passages 生成,导致 citation 错位或事实虚构[[raw/papers/2023-10-self-rag#^p-11-991291]] ^p-4-f9f601
 
 ## 演化方向 ^h-2-4-fc9893
 

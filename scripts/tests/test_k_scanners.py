@@ -196,6 +196,108 @@ class TestListBrokenRefs:
         items = k.list_broken_refs(k.load_all_wiki_pages())
         assert items == []
 
+    def test_wiki_anchor_missing_detected(self, fake_kb):
+        # 目标 wiki 页存在、但其计算块锚点里没有被引的 anchor → 判 broken。
+        write_md(
+            fake_kb / "wiki" / "sources" / "tgt.md",
+            standard_fm(),
+            "# Tgt ^h-1-1-aaaaaa\n\nreal para ^p-1-bbbbbb\n",
+        )
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\nClaim [[wiki/sources/tgt#^p-99-zzzzzz]].\n",
+        )
+        items = k.list_broken_refs(k.load_all_wiki_pages())
+        assert len(items) == 1
+        assert items[0]["reason"] == "anchor 不存在"
+        assert "tgt" in items[0]["target"]
+
+    def test_wiki_anchor_not_fooled_by_bare_anchor_text(self, fake_kb):
+        # 回归：目标页正文里"恰好出现"裸锚点文本（如表格里列举的 ^t-2-cccccc），
+        # 但它不是该页真实的块锚点 → 引用它仍应判 broken（旧的内联扫描会漏报）。
+        write_md(
+            fake_kb / "wiki" / "sources" / "tgt.md",
+            standard_fm(),
+            "# Tgt ^h-1-1-aaaaaa\n\n收录于 Survey ^t-2-cccccc 一行 ^p-1-bbbbbb\n",
+        )
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\nClaim [[wiki/sources/tgt#^t-2-cccccc]].\n",
+        )
+        items = k.list_broken_refs(k.load_all_wiki_pages())
+        assert len(items) == 1
+        assert items[0]["reason"] == "anchor 不存在"
+
+    def test_wiki_anchor_present_ok(self, fake_kb):
+        write_md(
+            fake_kb / "wiki" / "sources" / "tgt.md",
+            standard_fm(),
+            "# Tgt ^h-1-1-aaaaaa\n\nreal para ^p-1-bbbbbb\n",
+        )
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\nClaim [[wiki/sources/tgt#^p-1-bbbbbb]].\n",
+        )
+        assert k.list_broken_refs(k.load_all_wiki_pages()) == []
+
+    def test_wiki_anchor_hash_tolerant_ok(self, fake_kb):
+        # 与 read_block 同口径：type/seq 写错但 hash6 全页唯一命中 → 可解析、不报 broken。
+        write_md(
+            fake_kb / "wiki" / "sources" / "tgt.md",
+            standard_fm(),
+            "# Tgt ^h-1-1-aaaaaa\n\nreal para ^p-1-bbbbbb\n",
+        )
+        write_md(
+            fake_kb / "wiki" / "concepts" / "p.md",
+            standard_fm(),
+            "# X\n\nClaim [[wiki/sources/tgt#^t-1-bbbbbb]].\n",
+        )
+        assert k.list_broken_refs(k.load_all_wiki_pages()) == []
+
+
+# ============================================================
+# read_block —— 哈希容错回收
+# ============================================================
+
+class TestReadBlockHashRecovery:
+    def _page(self, fake_kb, body: str) -> Path:
+        p = fake_kb / "wiki" / "concepts" / "p.md"
+        write_md(p, standard_fm(), body)
+        return p
+
+    def test_exact_match_no_recovery(self, fake_kb):
+        p = self._page(fake_kb, "# X ^h-1-1-aaaaaa\n\nbody one ^p-1-bbbbbb\n")
+        r = k.read_block(p, "^p-1-bbbbbb")
+        assert r["anchor"] == "p-1-bbbbbb"
+        assert "recovered_from" not in r
+        assert "body one" in r["content"]
+
+    def test_wrong_type_recovered_by_hash(self, fake_kb):
+        # 表格类型写错为 ^t-，但 hash6 唯一命中 ^p-1-bbbbbb → 按内容指纹恢复
+        p = self._page(fake_kb, "# X ^h-1-1-aaaaaa\n\nbody one ^p-1-bbbbbb\n")
+        r = k.read_block(p, "^t-1-bbbbbb")
+        assert r["anchor"] == "p-1-bbbbbb"
+        assert r["recovered_from"] == "t-1-bbbbbb"
+        assert "body one" in r["content"]
+
+    def test_orphan_hash_still_raises(self, fake_kb):
+        # hash6 全页不存在（孤儿锚点）→ 仍报未找到，交上层降级
+        p = self._page(fake_kb, "# X ^h-1-1-aaaaaa\n\nbody one ^p-1-bbbbbb\n")
+        with pytest.raises(LookupError):
+            k.read_block(p, "^t-9-zzzzzz")
+
+    def test_ambiguous_hash_not_recovered(self, fake_kb):
+        # 同一 hash6 出现在多个块（理论碰撞）→ 不唯一 → 不擅自恢复
+        p = self._page(
+            fake_kb,
+            "# X ^h-1-1-aaaaaa\n\npara A ^p-1-cccccc\n\npara B ^p-2-cccccc\n",
+        )
+        with pytest.raises(LookupError):
+            k.read_block(p, "^t-1-cccccc")
+
 
 # ============================================================
 # list_index_count_mismatches

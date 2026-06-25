@@ -32,7 +32,7 @@ tags:
 | **Answer Relevance** | answer 是否回答了 query | 类 IsUse |
 ^t-1-5d67e9 ^p-2-af89c4
 
-**关键洞察**:RAGAS 的三维度评估框架**与 Self-RAG 的 reflection tokens 思想同源** — 但 RAGAS 在评估层(外部 LLM-as-judge),Self-RAG 在生成层(内嵌到 vocabulary)[[wiki/sources/self_rag#^t-23-1c2106]]。这是同一组思想的不同实现层级。 ^p-3-693526
+**关键洞察**:RAGAS 的三维度评估框架**与 Self-RAG 的 reflection tokens 思想同源** — 但 RAGAS 在评估层(外部 LLM-as-judge),Self-RAG 在生成层(内嵌到 vocabulary)[[raw/papers/2023-10-self-rag#^t-23-1c2106]]。这是同一组思想的不同实现层级。 ^p-3-693526
 
 详见 [[wiki/sources/ragas]] + Gao Survey §VI 章节[[wiki/sources/gao_rag_survey#^h-2-1-9f7e46]]。 ^p-3a-re-ragas-anchor
 

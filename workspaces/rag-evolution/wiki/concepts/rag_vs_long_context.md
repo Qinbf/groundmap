@@ -33,7 +33,7 @@ tags:
 但 **RAG 仍有不可替代场景**:
 - **成本优势**:输入 token 数显著少,直接对应 API 成本
 - **Corpus 远超 model context**:GPT-3.5-Turbo (16K) 上 ∞Bench (147K) 时 RAG 反超
-- **63% 的 query 上 RAG 与 LC 结果完全相同**——RAG 不是"差",是"在硬 query 上失败"[[wiki/sources/rag_or_longcontext#^p-38-54f895]] ^p-2-9e3703
+- **63% 的 query 上 RAG 与 LC 结果完全相同**——RAG 不是"差",是"在硬 query 上失败"[[raw/papers/2024-07-rag-or-longcontext#^p-38-54f895]] ^p-2-9e3703
 
 ## RAG 失败的 4 类硬 query ^h-2-2-ae1b9a
 
@@ -55,7 +55,7 @@ DeepMind 总结 RAG 输给 LC 的查询类型:
 
 **Step 2 (LC)**:把全文给 LLM,LC 范式回答。
 
-**结果**:成本减 65%(Gemini-1.5-Pro)/ 39%(GPT-4O),性能逼近 LC[[wiki/sources/rag_or_longcontext#^h-2-4-6a846e]]。 ^p-4-f44cd1
+**结果**:成本减 65%(Gemini-1.5-Pro)/ 39%(GPT-4O),性能逼近 LC[[raw/papers/2024-07-rag-or-longcontext#^h-2-4-6a846e]]。 ^p-4-f44cd1
 
 ## 对前 3 篇 RAG 工作的隐含挑战 ^h-2-4-698a79
 

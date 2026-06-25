@@ -23,7 +23,7 @@ tags:
 > **作者**: Fangyuan Xu, Weijia Shi, Eunsol Choi(UT Austin / U Washington)
 > **发表**: 2023-10 arXiv preprint(ICLR 2024)
 > **arXiv**: [2310.04408](https://arxiv.org/abs/2310.04408)
-> **历史地位**:**Gao Survey Table I 收录,line "Recomp \| Wikipedia \| Text \| Doc \| Inference \| Once"**[[wiki/sources/gao_rag_survey#^t-2-db7484]];RAG-or-LongContext §2 引用作 "prompt compression" 方向代表[需要来源] ^p-1-dd220f
+> **历史地位**:**Gao Survey Table I 收录,line "Recomp \| Wikipedia \| Text \| Doc \| Inference \| Once"**[[wiki/sources/gao_rag_survey]];RAG-or-LongContext §2 引用作 "prompt compression" 方向代表[需要来源] ^p-1-dd220f
 
 ## 摘要 ^h-2-1-3ae146
 

@@ -54,7 +54,7 @@ tags:
 
 ## 经验结果摘要 ^h-2-5-6a2356
 
-- **Self-CRAG > Self-RAG**(在 SelfRAG-LLaMA2-7B base 上):PopQA +6.9% / Bio +5.0% / PubHealth +2.4% [[wiki/sources/crag#^t-61-e54a35]]
+- **Self-CRAG > Self-RAG**(在 SelfRAG-LLaMA2-7B base 上):PopQA +6.9% / Bio +5.0% / PubHealth +2.4% [[raw/papers/2024-01-crag#^t-61-e54a35]]
 - CRAG **plug-and-play 上 vanilla RAG**:PopQA +4.4% / Bio +2.8% / PubHealth +29.5% / ARC +10.3%
 - 关键洞察:CRAG 是 RAG 升级套件,可与各种 generator 自由组合 ^p-8-2feda4
 

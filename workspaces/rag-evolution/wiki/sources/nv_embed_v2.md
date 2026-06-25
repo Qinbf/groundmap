@@ -34,7 +34,7 @@ NV-Embed 用 **decoder-only LLM(Mistral-7B)作为 backbone** 训练 embedding mo
 1. **LLM-as-encoder 范式**:7B decoder LLM 的内部表示比 BERT-large 更丰富,关键是怎么"读出来" [KB 综合]
 2. **Latent attention pooling** 是关键创新——用 trainable query 向量做 attention pooling,优于 mean / last token pooling [[raw/papers/2024-05-nv-embed-v2]]
 3. **大规模训练数据**(包括 generated synthetic data)+ **multi-stage 训练**(supervised + retrieval-specific fine-tune) [[raw/papers/2024-05-nv-embed-v2]]
-4. **HippoRAG 2 用 NV-Embed v2 作 strong baseline**——HippoRAG 2 论文的核心论断"all previous structure-augmented methods underperform against the strongest embedding-based RAG"中的 strongest 就是指 NV-Embed v2[[wiki/sources/hipporag2#^p-15-499758]] ^p-3-6a8bd5
+4. **HippoRAG 2 用 NV-Embed v2 作 strong baseline**——HippoRAG 2 论文的核心论断"all previous structure-augmented methods underperform against the strongest embedding-based RAG"中的 strongest 就是指 NV-Embed v2[[wiki/sources/hipporag2]] ^p-3-6a8bd5
 
 ## AI 综合判断 ^h-2-3-e0eacb
 

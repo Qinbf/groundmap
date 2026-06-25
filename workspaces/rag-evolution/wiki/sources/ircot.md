@@ -40,7 +40,7 @@ IRCoT 解决 **multi-hop QA** 问题——单次 retrieval 不足以回答需要
 
 ### 核心价值 ^h-3-1-57ae37
 
-IRCoT 是 **multi-hop retrieval 的 prompting 经典** — Self-RAG / CRAG / R1 派的多跳能力本质上都在解决 IRCoT 提出的问题,但路径不同(SFT / evaluator / RL)。Gao Survey Table I 收录 IRCoT 为 "Wikipedia / Chunk / Inference / Recursive" 类[[wiki/sources/gao_rag_survey#^t-2-db7484]]。**Search-R1 论文 §2 显式批评 IRCoT**:依赖高质量 prompt 工程,无法 scale[[raw/papers/2025-03-search-r1#^p-19-ab77b7]]。 ^p-4-1ce538
+IRCoT 是 **multi-hop retrieval 的 prompting 经典** — Self-RAG / CRAG / R1 派的多跳能力本质上都在解决 IRCoT 提出的问题,但路径不同(SFT / evaluator / RL)。Gao Survey Table I 收录 IRCoT 为 "Wikipedia / Chunk / Inference / Recursive" 类[[wiki/sources/gao_rag_survey]]。**Search-R1 论文 §2 显式批评 IRCoT**:依赖高质量 prompt 工程,无法 scale[[raw/papers/2025-03-search-r1#^p-19-ab77b7]]。 ^p-4-1ce538
 
 ### 关联 ^h-3-2-1c3cf7
 

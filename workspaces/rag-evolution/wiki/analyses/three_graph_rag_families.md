@@ -53,7 +53,7 @@ KB ingest 这 3 篇时各触发 1 个冲突标注(详见 [[wiki/concepts/graph_r
 
 **分裂 1:community detection 必要吗?**(GraphRAG vs LightRAG)
 
-LightRAG 论文 §3.4 line 170 显式批评 GraphRAG:"markedly reduces retrieval overhead compared to the community-based traversal method used in GraphRAG"[[wiki/sources/lightrag#^p-54-53a60a]]。
+LightRAG 论文 §3.4 line 170 显式批评 GraphRAG:"markedly reduces retrieval overhead compared to the community-based traversal method used in GraphRAG"[[raw/papers/2024-10-lightrag#^p-54-53a60a]]。
 
 LightRAG 的主张:用 K-V pair + dual-level retrieval 就能拿到大部分 graph 收益,不需要 Leiden community detection 的工程复杂度,且支持 incremental update。
 
@@ -61,11 +61,11 @@ LightRAG 的主张:用 K-V pair + dual-level retrieval 就能拿到大部分 gra
 
 **分裂 2:LLM 生成内容能否进 retrieval pool?**(GraphRAG/LightRAG/RAPTOR vs HippoRAG 1/2)
 
-HippoRAG 2 §2.2 line 130 提出更深的方法论质疑[[wiki/sources/hipporag2#^p-26-f0d8a2]]:GraphRAG / LightRAG / RAPTOR 都让"LLM 生成的 summary / K-V"进入 retrieval pool,这会**引入 noise**,在 simple factual QA 上反而不如 strong embedding(NV-Embed-v2)。
+HippoRAG 2 §2.2 line 130 提出更深的方法论质疑[[wiki/sources/hipporag2]]:GraphRAG / LightRAG / RAPTOR 都让"LLM 生成的 summary / K-V"进入 retrieval pool,这会**引入 noise**,在 simple factual QA 上反而不如 strong embedding(NV-Embed-v2)。
 
 HippoRAG 2 的主张:KG 应该**只用于辅助 retrieval 流程**(决定哪些原始 passages 被检索 + 用 PPR 排序),**不应让 LLM 生成内容污染 pool**。
 
-**关键实验证据**(论文 §1 line 91):"all previous structure-augmented methods underperform against the strongest embedding-based RAG methods available on all three benchmark types"[[wiki/sources/hipporag2#^p-15-499758]]。
+**关键实验证据**(论文 §1 line 91):"all previous structure-augmented methods underperform against the strongest embedding-based RAG methods available on all three benchmark types"[[wiki/sources/hipporag2]]。
 
 **KB 综合判断**:HippoRAG 2 的方法论反思**比单纯实验数字更有价值**——它指出之前 graph RAG 论文都"只在自己擅长的 benchmark 上证明优势"。引入"必须 3 类任务都不输 strong embedding"作为新 bar,是健康的演化方向。 ^p-5-52b27a
 

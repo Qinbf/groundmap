@@ -160,7 +160,7 @@ tags:
 ```
 ^p-6-81df8c
 
-**关键发现**(Batch 4 升级时识别):**ReAct 的多轮模板**(`<think> / <action> / <observation>`)在 R1 派 RL 范式中**被强化**而非废弃 — RL 训练让 LLM 从"靠 prompt 学 ReAct"变为"参数里内化 ReAct"[[raw/papers/2025-03-search-r1#^p-19-ab77b7]]。**Prompting → SFT → RL 是同一思想的不同实现层级**。详见 [[wiki/sources/r1_searcher#^p-14-f86361]] 的 7B base 在 Bamboogle 超 Search-o1 32B +11.4% 数据,以及 [[wiki/sources/self_rag#^p-7-e473bf]] 的批评"prompting 路线 inference 效率低 + 依赖闭源 LLM"。 ^p-7-e893cf
+**关键发现**(Batch 4 升级时识别):**ReAct 的多轮模板**(`<think> / <action> / <observation>`)在 R1 派 RL 范式中**被强化**而非废弃 — RL 训练让 LLM 从"靠 prompt 学 ReAct"变为"参数里内化 ReAct"[[raw/papers/2025-03-search-r1#^p-19-ab77b7]]。**Prompting → SFT → RL 是同一思想的不同实现层级**。详见 [[wiki/sources/r1_searcher]] 的 7B base 在 Bamboogle 超 Search-o1 32B +11.4% 数据,以及 [[wiki/sources/self_rag#^p-7-e473bf]] 的批评"prompting 路线 inference 效率低 + 依赖闭源 LLM"。 ^p-7-e893cf
 
 **主线 2 完整因果链**(corpus 表征):
 

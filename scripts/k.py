@@ -1597,8 +1597,25 @@ def read_section(md_path: Path, anchor_or_title: str) -> dict:
     }
 
 
+def _anchor_hash6(anchor: str) -> str | None:
+    """从锚点串里抽出 6 位内容哈希 hash6（= md5(归一化内容)[:6]，恒为 16 进制）。
+
+    锚点形如 p-{seq}-{hash6} / h-{level}-{seq}-{hash6}，可带 -{N} 碰撞后缀。
+    hash6 是块内容的近唯一指纹——type/seq 是结构位置、可被模型写错，hash6 才标识"是哪段内容"。
+    """
+    a = anchor.lstrip("^")
+    m = re.match(r"^[hpcft]-\d+(?:-\d+)?-([0-9a-f]{6})(?:-\d+)?$", a)
+    return m.group(1) if m else None
+
+
 def read_block(md_path: Path, anchor: str) -> dict:
-    """根据 ^p-/^t-/^c-/^f- anchor 取出单个 block 原文。"""
+    """根据 ^p-/^t-/^c-/^f- anchor 取出单个 block 原文。
+
+    精确锚点未命中时，做一次**哈希容错回收**：按 anchor 末段的 hash6（内容指纹）在全文块里找，
+    仅当**恰好一个**块命中该 hash6 时才返回它（附 recovered_from）。这样能确定性修复"内容哈希抄对、
+    但 type/seq 写错"的引用（典型：表格被解析为 ^p- 却被引为 ^t-；或把 ^p-7-x 误写成 ^t-7-x），
+    而内容真不在本页的孤儿锚点（hash6 零命中）仍按原样报"未找到"、由上层降级处理。
+    """
     target = anchor.lstrip("^")
     blocks = parse_blocks_with_anchors(md_path)
     for blk in blocks:
@@ -1611,6 +1628,22 @@ def read_block(md_path: Path, anchor: str) -> dict:
                 "line_start": blk.line_start,
                 "line_end": blk.line_end,
                 "content": text,
+            }
+    # 哈希容错回收：仅在 hash6 全文唯一命中时恢复，避免误配
+    th = _anchor_hash6(target)
+    if th:
+        matches = [b for b in blocks if b.anchor and _anchor_hash6(b.anchor) == th]
+        if len(matches) == 1:
+            blk = matches[0]
+            text = ANCHOR_TAIL_RE.sub("", blk.text).rstrip()
+            return {
+                "path": _to_rel_posix(md_path),
+                "anchor": blk.anchor,
+                "kind": blk.kind,
+                "line_start": blk.line_start,
+                "line_end": blk.line_end,
+                "content": text,
+                "recovered_from": target,  # 原引用锚点的 type/seq 与真实块不符，已按内容 hash6 校正
             }
     raise LookupError(f"未找到 anchor: {anchor}")
 
@@ -1780,11 +1813,44 @@ def annotate_section(md_path: Path, anchor: str, summary: str) -> dict:
 
 
 def _collect_anchors_in_md(md_path: Path) -> set[str]:
-    """提取 md 文件中所有锚点 id（heading + paragraph 等所有类型）。"""
+    """提取 md 文件中所有锚点 id（heading + paragraph 等所有类型）。
+
+    注意：这是**内联文本扫描**——会把正文里出现的裸锚点文本（如表格里列举的 ^t-2-db7484、
+    或 [[...]] 引用内部的锚点）也当成"本页锚点"。对 raw 文件没问题（raw 的锚点就是行尾内联标记，
+    且正文一般不含裸锚点文本）；但对 wiki 页会**漏报坏块引用**（裸锚点文本骗过它）。wiki 页的
+    锚点存在性应改用 _resolvable_anchor_index（与 read_block 同口径）。
+    """
     if not md_path.exists():
         return set()
     text = md_path.read_text(encoding="utf-8")
     return set(ANCHOR_RE_INLINE.findall(text))
+
+
+def _resolvable_anchor_index(md_path: Path) -> tuple[set[str], dict[str, int]]:
+    """目标页**能被 read_block 解析**的锚点集合 + hash6 计数（与 read_block 完全同口径）。
+
+    用计算/回填的块锚点（parse_blocks_with_anchors，只认每个块行尾的真实锚点标记），
+    而非 _collect_anchors_in_md 的全文内联扫描——后者会被正文里的裸锚点文本骗过。
+    返回 (anchors, hash6→出现次数)，供 _anchor_resolvable 做"精确 or hash6 唯一容错"判断。
+    """
+    if not md_path.exists():
+        return set(), {}
+    anchors = {b.anchor for b in parse_blocks_with_anchors(md_path) if b.anchor}
+    hashes: dict[str, int] = {}
+    for a in anchors:
+        h = _anchor_hash6(a)
+        if h:
+            hashes[h] = hashes.get(h, 0) + 1
+    return anchors, hashes
+
+
+def _anchor_resolvable(anchor_id: str, index: tuple[set[str], dict[str, int]]) -> bool:
+    """与 read_block 同口径判断 anchor 是否可解析：精确命中，或 hash6 在该页唯一命中（容错回收）。"""
+    anchors, hashes = index
+    if anchor_id in anchors:
+        return True
+    h = _anchor_hash6(anchor_id)
+    return bool(h and hashes.get(h) == 1)
 
 
 WIKI_REF_PREFIX_RE = re.compile(r"^wiki/", re.IGNORECASE)
@@ -1804,7 +1870,8 @@ def list_broken_refs(pages) -> list[dict]:
     """
     out = []
     # 目标 .md 路径（rel）→ 其锚点集合，避免重复扫盘
-    anchor_cache: dict[str, set[str]] = {}
+    anchor_cache: dict[str, set[str]] = {}          # raw 目标：内联锚点集合
+    resolvable_cache: dict[str, tuple] = {}          # wiki 目标：read_block 同口径的可解析索引
 
     for page in pages:
         # 跳过反引号包裹的字面占位（如周报里写 `[[raw/...#^anchor]]` 当格式示例）
@@ -1829,6 +1896,13 @@ def list_broken_refs(pages) -> list[dict]:
             reason = None
             if not doc_path.exists():
                 reason = f"{kind_label} 文件不存在"
+            elif is_wiki:
+                # wiki 页：与 read_block 同口径（计算块锚点 + hash6 容错）判断锚点是否真能解析，
+                # 避免旧的内联扫描被正文裸锚点文本骗过而漏报坏块引用。
+                if target_norm not in resolvable_cache:
+                    resolvable_cache[target_norm] = _resolvable_anchor_index(doc_path)
+                if not _anchor_resolvable(anchor_id, resolvable_cache[target_norm]):
+                    reason = "anchor 不存在"
             else:
                 if target_norm not in anchor_cache:
                     anchor_cache[target_norm] = _collect_anchors_in_md(doc_path)

@@ -40,40 +40,40 @@ Self-RAG 引入 4 类特殊 tokens 作为 LM vocabulary 的扩展:
 | `IsUse` | (x, y) | {5, 4, 3, 2, 1} | 整体回答有多有用 |
 ^t-1-5d67e9
 
-详见 [[wiki/sources/self_rag#^t-23-1c2106]]。 ^p-2-54f54a
+详见 [[raw/papers/2023-10-self-rag#^t-23-1c2106]]。 ^p-2-54f54a
 
 ## 训练流程 ^h-2-2-41bef4
 
 1. **GPT-4 监督**:对每类 reflection token,prompt GPT-4 生成 4k-20k 训练样本
-2. **distill 到 critic model 𝒞**:用监督样本训 Llama2-7B critic,与 GPT-4 标注 agreement >90%[[wiki/sources/self_rag#^p-49-b2784e]]
+2. **distill 到 critic model 𝒞**:用监督样本训 Llama2-7B critic,与 GPT-4 标注 agreement >90%[[raw/papers/2023-10-self-rag#^p-49-b2784e]]
 3. **离线增强 corpus**:用 𝒞 给 instruction corpus 自动插入 reflection tokens
 4. **训 generator ℳ**:在增强后的 corpus 上做标准 next-token 训练,把 reflection 能力内化进 Llama2 7B/13B
 
-**关键工程优势**:inference 时不再需要跑 critic,reflection 能力已经在 generator 的 vocabulary 里[[wiki/sources/self_rag#^h-5-3-a0c095]]。 ^p-3-a9bcc4
+**关键工程优势**:inference 时不再需要跑 critic,reflection 能力已经在 generator 的 vocabulary 里[[raw/papers/2023-10-self-rag#^h-5-3-a0c095]]。 ^p-3-a9bcc4
 
 ## 与 RLHF / PPO 的区别 ^h-2-3-71265d
 
-RLHF/PPO 需要在训练循环里跑 reward model + actor-critic 更新,计算昂贵。Self-Reflective RAG 把 critique 离线插入 corpus,用标准 LM objective 训,**训练成本显著低于 PPO**[[wiki/sources/self_rag#^h-5-3-a0c095]]。 ^p-4-da546b
+RLHF/PPO 需要在训练循环里跑 reward model + actor-critic 更新,计算昂贵。Self-Reflective RAG 把 critique 离线插入 corpus,用标准 LM objective 训,**训练成本显著低于 PPO**[[raw/papers/2023-10-self-rag#^h-5-3-a0c095]]。 ^p-4-da546b
 
 ## Inference 可控性 ^h-2-4-7e7e9a
 
 - **Hard threshold**:`Retrieve=Yes` 的概率超过阈值才触发检索器
 - **Soft re-ranking**:对每个 segment 候选,用 reflection tokens 的概率加权打分(`w_IsRel · s_IsRel + w_IsSup · s_IsSup + w_IsUse · s_IsUse`)
 - **Segment-level beam search**:每个 segment 取 top-B,最终序列由 reflection 加权决定
-- **Hard constraints**:可在 decoding 时过滤 `IsSup=No support` 的候选[[wiki/sources/self_rag#^h-3-3-e26d42]] ^p-5-018201
+- **Hard constraints**:可在 decoding 时过滤 `IsSup=No support` 的候选[[raw/papers/2023-10-self-rag#^h-3-3-e26d42]] ^p-5-018201
 
 ## 经验结果摘要 ^h-2-5-bb0354
 
 - Self-RAG **7B** 在 PopQA / PubHealth / Bio / ASQA 超过 ChatGPT
 - Self-RAG **13B** 全面超过所有 non-proprietary 基线
-- **citation precision** 是最大亮点:13B 在 ASQA 达 70.3,vs Llama2-13B + 标准 RAG 的 2.3(30× 提升)[[wiki/sources/self_rag#^t-77-9e8336]] ^p-6-5bbaae
+- **citation precision** 是最大亮点:13B 在 ASQA 达 70.3,vs Llama2-13B + 标准 RAG 的 2.3(30× 提升)[[raw/papers/2023-10-self-rag#^t-77-9e8336]] ^p-6-5bbaae
 
 > [!WARNING] 知识更新冲突 — 2026-05-26
-> **旧观点(Self-RAG, Asai et al. ICLR 2024)**:把"何时检索 / 检索是否相关 / 生成是否 grounded"这些判断**内化到 generator vocabulary**(reflection tokens)是 RAG 自纠错的最佳路径;训练流程 = GPT-4 → Llama2-7B critic → 离线给 corpus 标注 → 训 generator。Self-RAG 7B/13B 已超过所有 non-proprietary baselines(来源:[[wiki/sources/self_rag#^h-3-2-aeed1d]])。
+> **旧观点(Self-RAG, Asai et al. ICLR 2024)**:把"何时检索 / 检索是否相关 / 生成是否 grounded"这些判断**内化到 generator vocabulary**(reflection tokens)是 RAG 自纠错的最佳路径;训练流程 = GPT-4 → Llama2-7B critic → 离线给 corpus 标注 → 训 generator。Self-RAG 7B/13B 已超过所有 non-proprietary baselines(来源:[[raw/papers/2023-10-self-rag#^h-3-2-aeed1d]])。
 >
 > **新证据(CRAG, Yan et al. arXiv 2024-01)**:
-> - (a) 把 critic **外置为独立 evaluator**(T5-large fine-tuned, **0.77B 参数**)比 Self-RAG 的 Llama2-7B critic **轻 9 倍**且效果更好[[wiki/sources/crag#^p-33-cfbe40]]
-> - (b) **Self-CRAG > Self-RAG**(在 SelfRAG-LLaMA2-7B base 上):PopQA +6.9% / Bio FactScore +5.0% / PubHealth +2.4%——意味着即使采纳了 Self-RAG 的内化训练,**外部 evaluator + web search 兜底仍能再加显著一层收益**[[wiki/sources/crag#^t-61-e54a35]]
+> - (a) 把 critic **外置为独立 evaluator**(T5-large fine-tuned, **0.77B 参数**)比 Self-RAG 的 Llama2-7B critic **轻 9 倍**且效果更好[[raw/papers/2024-01-crag#^p-33-cfbe40]]
+> - (b) **Self-CRAG > Self-RAG**(在 SelfRAG-LLaMA2-7B base 上):PopQA +6.9% / Bio FactScore +5.0% / PubHealth +2.4%——意味着即使采纳了 Self-RAG 的内化训练,**外部 evaluator + web search 兜底仍能再加显著一层收益**[[raw/papers/2024-01-crag#^t-61-e54a35]]
 > - (c) Self-RAG 完全限定在**静态 corpus**;CRAG 引入 **web search 兜底**,处理 corpus 本身缺失的场景
 >
 > **LLM 判断**:这不是 Self-RAG 错了,而是 Self-RAG 的"内化是终极路径"的隐含假设被证伪——critic 内化与外置 evaluator 是**互补**而非互斥。CRAG 表明 Self-RAG 还有未充分利用的"外加一层精炼"空间。但 CRAG 也引入了新依赖(Google Search API)与额外 inference 开销,生产落地的 trade-off 仍未明朗。

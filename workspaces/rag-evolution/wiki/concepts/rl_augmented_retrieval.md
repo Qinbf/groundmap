@@ -28,7 +28,7 @@ tags:
 
 ## 核心机制 ^h-2-1-eb3cb7
 
-1. **训练目标**:RL outcome reward(答对 = +,答错 = -)+ format reward(必须用规定 tag 包 query / 文档 / 推理 / 答案)[[wiki/sources/r1_searcher#^h-3-2-fb4ea9]]
+1. **训练目标**:RL outcome reward(答对 = +,答错 = -)+ format reward(必须用规定 tag 包 query / 文档 / 推理 / 答案)[[raw/papers/2025-03-r1-searcher#^h-3-2-fb4ea9]]
 2. **多轮交互 rollout**:LLM 生成 → 触发 `<search>` 或 `<begin_of_query>` → 系统调真实 retrieval → 把结果用 `<information>` 或 `<begin_of_documents>` 包回 → LLM 继续推理 → 最终 `<answer>`[[wiki/sources/search_r1#^p-5-0140b8]]
 3. **Retrieved Token Loss Masking**:检索文档不应被"学会生成",mask 这些 token 不参与 policy gradient[[raw/papers/2025-03-search-r1#^h-4-1-1d50aa]]
 4. **基础 RL 算法**:可选 Reinforce++ / PPO / GRPO[[raw/papers/2025-03-search-r1#^h-4-3-432983]]
@@ -81,7 +81,7 @@ tags:
 > | **IL 派**(MCTS + imitation)| [[wiki/sources/deeprag]] (2025-02) | **MCTS 找路径 → Imitation Learning 训学生** | 高(MCTS rollout 昂贵) | 学生模仿 MCTS 最优路径 | atomic decision MDP 建模比 outcome reward 更细 |
 >
 > **核心冲突论断**:
-> - **R1 派挑战 o1 派**:[[wiki/sources/r1_searcher]] 论文显式声明在 Bamboogle 上 **7B base 超过 Search-o1 32B base 11.4%**[[wiki/sources/r1_searcher#^p-14-f86361]] — 这反驳了 o1 派的"靠强 base model + prompting 涌现"假设
+> - **R1 派挑战 o1 派**:[[wiki/sources/r1_searcher]] 论文显式声明在 Bamboogle 上 **7B base 超过 Search-o1 32B base 11.4%**[[wiki/sources/r1_searcher]] — 这反驳了 o1 派的"靠强 base model + prompting 涌现"假设
 > - **IL 派 vs RL 派的 MDP 粒度之争**:DeepRAG 主张 atomic decision MDP 比 outcome reward 更细粒度,更稳定;但 IL 需要 MCTS rollout 昂贵
 > - **R1 派 vs o1 派的训练必要性之争**:R1 派必须训新模型,o1 派完全靠现成 LRM — **范式根本对立**
 >
@@ -107,8 +107,8 @@ tags:
 >
 > **核心冲突论断**:
 > - **ZeroSearch 挑战所有前三条路**:R1 派(本地 corpus 老化)/ 真实 API 派(成本不可行)/ o1 派(对 base model 要求高)。它的方法论假设是:**LLM 模拟环境质量足够好就够,真实数据不必需**。
-> - **关键证据**:**14B 模拟器训出的 policy > 真实 Google search engine 训出的 policy**[[wiki/sources/zerosearch#^t-60-60b1ca]] — 这反驳了"必须真实数据"假设
-> - **与 R1 派同 backbone 对比**:Qwen-2.5-7B 上 ZeroSearch avg 40.93 vs Search-R1 39.51(+1.42)[[wiki/sources/zerosearch#^t-60-60b1ca]]
+> - **关键证据**:**14B 模拟器训出的 policy > 真实 Google search engine 训出的 policy**[[wiki/sources/zerosearch]] — 这反驳了"必须真实数据"假设
+> - **与 R1 派同 backbone 对比**:Qwen-2.5-7B 上 ZeroSearch avg 40.93 vs Search-R1 39.51(+1.42)[[wiki/sources/zerosearch]]
 >
 > **LLM 判断**:这是 simulator-based RL 范式(类 AlphaGo Zero self-play 思想)在 LLM agent 时代的应用。**预言**:
 > 1. 2025 Q3 后续 R1 派工作会迁移到 ZeroSearch 范式(成本数量级下降)

@@ -45,7 +45,7 @@ tags:
 4. **Leiden 社区检测**:递归 hierarchical,leaf → root
 5. **Community Summaries**:LLM 给每个社区生成"报告型"摘要,low-level 摘要被 high-level 摘要递归 incorporate
 
-详见 [[wiki/sources/graphrag#^h-2-3-c08b6a]]。 ^p-3-2e58b6
+详见 [[raw/papers/2024-04-graphrag#^h-2-3-c08b6a]]。 ^p-3-2e58b6
 
 ## GraphRAG Query 流程 ^h-2-3-55fa8c
 
@@ -65,7 +65,7 @@ Query time **不需要重 LLM 推理 entity 提取**——所有重活在 index 
 
 ## 经验结果摘要 ^h-2-5-bb0354
 
-- GraphRAG **强烈优于 vector RAG** 在 comprehensiveness + diversity 两个指标上(GPT-4 evaluator, 1M token corpus, podcast + news 两个数据集)[[wiki/sources/graphrag#^p-14-6b609e]]
+- GraphRAG **强烈优于 vector RAG** 在 comprehensiveness + diversity 两个指标上(GPT-4 evaluator, 1M token corpus, podcast + news 两个数据集)[[wiki/sources/graphrag]]
 - *后续 ingest LightRAG / HippoRAG 2 后,本节会扩展为三方对照* ^p-6-9f602b
 
 > [!WARNING] 知识更新冲突 — 2026-05-26(Graph 派内部之争 vol.1)

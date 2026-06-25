@@ -70,7 +70,7 @@ DPR(2020)开启 supervised dense retrieval 时代,**需要 labeled QA pairs**(po
 | **Contriever** | **Self-RAG / CRAG / RAG-or-LongContext 默认 retriever**[[wiki/sources/self_rag#^p-6-b07098]] |
 | E5 | 工程 RAG 框架(LangChain / LlamaIndex)默认 |
 | **BGE** | **R1-Searcher 默认 retriever**[[wiki/sources/r1_searcher#^p-11-110ede]] |
-| **NV-Embed v2** | **HippoRAG 2 的主要 baseline**(用以证明"扩充 corpus 派 graph RAG 不如 strong embedding")[[wiki/sources/hipporag2#^p-15-499758]] |
+| **NV-Embed v2** | **HippoRAG 2 的主要 baseline**(用以证明"扩充 corpus 派 graph RAG 不如 strong embedding")[[wiki/sources/hipporag2]] |
 ^t-2-db7484 ^p-5-55818e
 
 **关键观察**:**NV-Embed v2 是 graph RAG 内部之争 vol.2 的具体 anchor**——HippoRAG 2 不只是反驳 GraphRAG/LightRAG 抽象路线,而是用 NV-Embed v2 作具体强基线。没有 retrieval foundation 6 篇做 anchor,KB demo 的冲突标注就缺一层支撑。 ^p-6-63ff90
