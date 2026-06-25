@@ -2815,7 +2815,7 @@ def _main_impl():
     sub.add_parser("list-source-issues", help="扫描 source_count 与 sources 数组不一致 / 论断页缺 source 不标 #to-be-updated 等问题", parents=[common])
     sub.add_parser("list-status-issues", help="扫描 status=reviewed 但 last_modified_by≠Human 的矛盾页（LLM 写入页自称已审阅）", parents=[common])
     sub.add_parser("list-relation-issues", help="扫描 [[X|RELATION]] 中非标准关系类型词（拼写错误 / 未在白名单）", parents=[common])
-    sub.add_parser("list-relation-balance", help="扫描关系词频次失衡：单一关系词占比 > 30% 报警（防 LLM 偷懒用最弱关系词）", parents=[common])
+    sub.add_parser("list-relation-balance", help="扫描关系词频次失衡：单一关系词占比 > 30%% 报警（防 LLM 偷懒用最弱关系词）", parents=[common])
     sub.add_parser("list-implicit-relations", help="扫描 plain wikilink + 判断/立场动词的段落（应改 [[?|RELATION]] 给图谱染色）", parents=[common])
     sub.add_parser("list-i18n-violations", help="扫描 web/ 下 .tsx 中硬编码的中文 UI 字符串（应走 t() / useT()）", parents=[common])
 
