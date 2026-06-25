@@ -67,11 +67,14 @@ async function callKCli(cliArgs: string[]) {
 }
 
 /**
- * 锚点查找 fallback：AI 常把 [[raw/articles/X#^p-NN]] 误写成 [[wiki/sources/X#^p-NN]]
- * （摘要页 basename 通常等同 raw 文件 basename，AI 偷懒省了前缀）。
+ * 锚点查找 fallback：AI 常把一条**真实的 raw 块锚点**（如 [[raw/papers/2024-10-lightrag#^p-54]]）
+ * 误标到它正在读的摘要页路径上（写成 [[wiki/sources/lightrag#^p-54]]）——锚点是对的、路径错了。
  *
- * 程序兜底：当 path 是 wiki/sources/X.md 且 anchor 在该路径未找到时，
- * 自动尝试 raw/articles/X.md 和 raw/papers/X.md。比改 system prompt 稳。
+ * 程序兜底：当 path 是 wiki/sources/X.md 且 anchor 在该路径未找到时，按以下顺序到对应 raw 文件重试：
+ *   1. 摘要页 frontmatter 里**声明的 `sources:`**（精确——能处理 `2024-10-lightrag` 这类日期前缀 /
+ *      任意命名，不靠 basename 猜测）；
+ *   2. 退而求其次：basename 猜测 raw/articles/X.md、raw/papers/X.md（frontmatter 缺失时兜底）。
+ * 命中即返回该 raw 块，并附 `_fallback` 元信息（UI 可据此把展示引用纠正为真实 raw 路径）。比改 system prompt 稳。
  *
  * 仅对 anchor-not-found 类错误兜底，其他错误（路径不存在 / 权限等）原样返回。
  */
@@ -86,7 +89,31 @@ async function readWithSourcesFallback(
   const m = originalPath.match(/^wiki\/sources\/(.+\.md)$/);
   if (!m) return primary;
   const basename = m[1];
-  for (const candidate of [`raw/articles/${basename}`, `raw/papers/${basename}`]) {
+
+  // 候选 raw 路径：优先用摘要页 frontmatter 声明的 sources（精确），再退到 basename 猜测。
+  const candidates: string[] = [];
+  try {
+    const page = await getPage(originalPath);
+    const srcs = (page?.frontmatter as { sources?: unknown } | undefined)?.sources;
+    if (Array.isArray(srcs)) {
+      for (const s of srcs) {
+        if (typeof s !== "string") continue;
+        const mm = s.match(/\[\[([^\]|#]+)/); // 取 [[ 后、到 | / # / ]] 前的路径
+        if (!mm) continue;
+        let p = mm[1].trim();
+        if (!p.endsWith(".md")) p += ".md";
+        if (p.startsWith("raw/") && isSafeRelPath(p)) candidates.push(p);
+      }
+    }
+  } catch {
+    // getPage 失败（页面损坏等）→ 忽略，退到 basename 猜测
+  }
+  candidates.push(`raw/articles/${basename}`, `raw/papers/${basename}`);
+
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
     const retry = await callKCli([cmd, candidate, anchor]);
     if (retry.ok) {
       // eslint-disable-next-line no-console

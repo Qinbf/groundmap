@@ -96,32 +96,54 @@ export function PreviewPanel({ refData, nodeData, workspace, onClose, onOpenRef 
     }
     let cancelled = false;
     setState({ kind: "loading" });
-    fetch("/api/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...fetchTarget, workspace: workspace || undefined }),
-    })
-      .then((r) => r.json())
-      .then((j) => {
+
+    const post = (tool: string, args: Record<string, unknown>) =>
+      fetch("/api/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tool, args, workspace: workspace || undefined }),
+      }).then((r) => r.json());
+
+    const path = typeof fetchTarget.args.path === "string" ? fetchTarget.args.path : "";
+    const anchor = typeof fetchTarget.args.anchor === "string" ? fetchTarget.args.anchor : "";
+    const hadAnchor = fetchTarget.tool !== "read_page" && !!anchor;
+
+    (async () => {
+      try {
+        const j = await post(fetchTarget.tool, fetchTarget.args);
         if (cancelled) return;
-        if (!j.ok) {
-          setState({ kind: "error", message: j.error || t("preview.unknown_error") });
+        if (j.ok) {
+          const fb =
+            j.data && typeof j.data === "object" && "_fallback" in j.data
+              ? ((j.data as { _fallback: unknown })._fallback as FallbackInfo)
+              : undefined;
+          setState({
+            kind: "ok",
+            rendered: renderToolResult(fetchTarget.tool, j.data),
+            fallback: fb,
+          });
           return;
         }
-        const fb =
-          j.data && typeof j.data === "object" && "_fallback" in j.data
-            ? ((j.data as { _fallback: unknown })._fallback as FallbackInfo)
-            : undefined;
-        setState({
-          kind: "ok",
-          rendered: renderToolResult(fetchTarget.tool, j.data),
-          fallback: fb,
-        });
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setState({ kind: "error", message: String(e) });
-      });
+        // 锚点确实不存在（且原本带锚点）→ 退化为整页展示，而不是对用户抛裸错。
+        // 即便模型编造了精确锚点位置，用户至少仍能看到正确的来源页。
+        if (hadAnchor && path && /未找到\s*anchor|no such file|page_not_found/i.test(j.error || "")) {
+          const j2 = await post("read_page", { path });
+          if (cancelled) return;
+          if (j2.ok) {
+            setState({
+              kind: "ok",
+              rendered: renderToolResult("read_page", j2.data),
+              fallback: { from: `${path}#^${anchor}`, to: path, reason: t("preview.anchor_missing_degraded") },
+            });
+            return;
+          }
+        }
+        setState({ kind: "error", message: j.error || t("preview.unknown_error") });
+      } catch (e) {
+        if (!cancelled) setState({ kind: "error", message: String(e) });
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
