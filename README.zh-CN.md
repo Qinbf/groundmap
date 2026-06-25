@@ -30,6 +30,12 @@ GroundMap 的出发点不同：
 - **人类专属区受保护**：`raw/**`、`my_thoughts/**`、`#human-only`、`locked: true` 文件由规范和 Git hooks 共同保护。
 - **类型化关系图谱**：双链可携带语义关系类型（`SUPPORTS` / `REFUTES` / `EXTENDS` 等），有白名单 lint 把关，并在 Web 管理台 `/graph` 渲染为交互式图谱。
 
+## 推荐使用智能体
+
+GroundMap 推荐配合 **Claude Code**、**Codex**、Cursor 类智能体，或任何能读文件、改 Markdown、执行 shell 命令的代码智能体一起使用。LLM 推理发生在知识库外部：智能体负责阅读完整 wiki 页面，调用 `scripts/k.py` 做搜索 / 大纲 / 反链 / 健康检查，更新 `wiki/**` Markdown，并通过 Git 提交变更。
+
+使用前建议让智能体先阅读 `CLAUDE.md` 或 `AGENTS.md`。这两份文件定义了摄入来源、回答查询、处理冲突、保护人类专属区、保持 Markdown 知识库可审计等操作规范。
+
 ## 项目效果
 
 浏览完整 wiki 页面、frontmatter、来源引用和块级预览。

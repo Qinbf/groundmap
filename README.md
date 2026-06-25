@@ -30,6 +30,12 @@ That gives you an AI-ready wiki that is easier to audit, diff, review, and maint
 - **Human-only zones**: `raw/**`, `my_thoughts/**`, `#human-only`, and `locked: true` files are protected by policy and hooks.
 - **Typed relation graph**: wikilinks can carry semantic relation types (`SUPPORTS`, `REFUTES`, `EXTENDS`, …), linted against a whitelist and rendered as an interactive graph at `/graph` in the Web console.
 
+## Recommended Agent Workflow
+
+GroundMap is designed to be managed with coding agents such as **Claude Code**, **Codex**, Cursor-style agents, or any tool that can read files, edit Markdown, and run shell commands. The agent handles LLM reasoning outside the knowledge base: it reads full wiki pages, calls `scripts/k.py` for search/outline/backlinks/health checks, updates `wiki/**` Markdown, and commits changes through Git.
+
+For best results, ask your agent to read `CLAUDE.md` or `AGENTS.md` before working in the repository. Those files define the operating rules for ingesting sources, answering queries, resolving conflicts, protecting human-only areas, and keeping the Markdown knowledge base auditable.
+
 ## Product Screenshots
 
 Browse complete wiki pages with frontmatter, source citations, and block previews.
