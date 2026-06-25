@@ -30,21 +30,19 @@ GroundMap 的出发点不同：
 - **人类专属区受保护**：`raw/**`、`my_thoughts/**`、`#human-only`、`locked: true` 文件由规范和 Git hooks 共同保护。
 - **类型化关系图谱**：双链可携带语义关系类型（`SUPPORTS` / `REFUTES` / `EXTENDS` 等），有白名单 lint 把关，并在 Web 管理台 `/graph` 渲染为交互式图谱。
 
-## 架构
+## 项目效果
 
-```mermaid
-flowchart LR
-  Raw["raw documents"] --> Convert["scripts/convert.py"]
-  Convert --> RawMd["raw/*.md with anchors"]
-  RawMd --> CLI["scripts/k.py"]
-  Wiki["wiki/*.md"] --> CLI
-  CLI --> Agent["external AI agent"]
-  Agent --> Wiki
-  Wiki --> Web["Next.js Web console"]
-  CLI --> Web
-  Wiki --> Git["Git history"]
-  RawMd --> Git
-```
+浏览完整 wiki 页面、frontmatter、来源引用和块级预览。
+
+![GroundMap Web 管理台浏览带来源引用的页面](docs/images/screenshots/web-console-page.png)
+
+把 wiki 页面之间的类型化关系渲染成交互式知识图谱。
+
+![GroundMap 交互式知识图谱](docs/images/screenshots/knowledge-graph.png)
+
+用可选调试控制台查看 agent 推理图、工具调用和带溯源的答案。
+
+![GroundMap 调试控制台展示推理图和带溯源答案](docs/images/screenshots/debug-console-reasoning.png)
 
 ## 快速开始
 

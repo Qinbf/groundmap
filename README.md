@@ -30,21 +30,19 @@ That gives you an AI-ready wiki that is easier to audit, diff, review, and maint
 - **Human-only zones**: `raw/**`, `my_thoughts/**`, `#human-only`, and `locked: true` files are protected by policy and hooks.
 - **Typed relation graph**: wikilinks can carry semantic relation types (`SUPPORTS`, `REFUTES`, `EXTENDS`, …), linted against a whitelist and rendered as an interactive graph at `/graph` in the Web console.
 
-## Architecture
+## Product Screenshots
 
-```mermaid
-flowchart LR
-  Raw["raw documents"] --> Convert["scripts/convert.py"]
-  Convert --> RawMd["raw/*.md with anchors"]
-  RawMd --> CLI["scripts/k.py"]
-  Wiki["wiki/*.md"] --> CLI
-  CLI --> Agent["external AI agent"]
-  Agent --> Wiki
-  Wiki --> Web["Next.js Web console"]
-  CLI --> Web
-  Wiki --> Git["Git history"]
-  RawMd --> Git
-```
+Browse complete wiki pages with frontmatter, source citations, and block previews.
+
+![GroundMap Web console reading a source-backed page](docs/images/screenshots/web-console-page.png)
+
+Explore typed wiki relations as an interactive knowledge graph.
+
+![GroundMap interactive knowledge graph](docs/images/screenshots/knowledge-graph.png)
+
+Use the optional debug console to inspect agent reasoning, tool calls, and grounded answers.
+
+![GroundMap debug console showing a reasoning graph and grounded answer](docs/images/screenshots/debug-console-reasoning.png)
 
 ## Quickstart
 
