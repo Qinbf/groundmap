@@ -28,6 +28,10 @@ workspaces/*/rag_baseline/slide-*.jpg
 /raw/
 /my_thoughts/
 /exports/
+# 顶层散落的原始资料（应放在 workspaces/<name>/raw/ 下，那里已被忽略）——
+# 防止 git add . 把受版权的原始论文/文章误提交进公开仓。
+/papers/
+/articles/
 #
 # 作者私人/非公开文档（商业策略、个人语境讨论等——绝不进开源仓）
 /开源策略讨论.md
