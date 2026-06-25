@@ -46,6 +46,9 @@ const MAX_TURNS = 12;
 const FOLLOW_UP_PROMPT =
   "你刚才漏了【ANSWER】段收尾。请立即基于已读到的内容输出 **【ANSWER】xxx** 段做收尾总结。不要再调工具，直接给文本答案。";
 
+const BUDGET_FINALIZE_PROMPT =
+  "工具预算/轮数已用尽，不要再调用任何工具。请立即基于**已经读到的内容**输出 **【ANSWER】** 段收尾：用「**基于读到的部分信息**：xxx；**未覆盖 / 未及核实**：xxx」的格式呈现，照常给每条实质论断附 [[...]] 引用。";
+
 /** 文本里是否出现了 ANSWER 段标记（容忍各种间隔与加粗包裹） */
 function hasAnswerSection(text: string): boolean {
   // 匹配 【ANSWER】 / 【 ANSWER 】 / **【ANSWER】** 等
@@ -266,6 +269,42 @@ export async function* runAgent(
   let toolsUsed = 0;
   let turnIdx = 0;
 
+  // 预算 / 轮数用尽时的「收尾轮」：禁用工具，逼模型基于已读内容出【ANSWER】，
+  // 而不是停在「半截工具调用、没有答案」（budget_exceeded 旧行为）。只跑一次。
+  async function* finalizeWithoutTools(): AsyncGenerator<AgentEvent> {
+    const finMsgs: ChatMessage[] = [
+      ...messages,
+      { role: "user", text: BUDGET_FINALIZE_PROMPT },
+    ];
+    let finText = "";
+    let finEnd: AgentEvent | null = null;
+    for await (const evt of provider.runTurn({
+      model,
+      system,
+      messages: finMsgs,
+      disable_tools: true,
+      signal: input.signal,
+    })) {
+      if (evt.kind === "text-delta") {
+        finText += evt.text;
+        totalAssistantText += evt.text;
+        yield evt;
+      } else if (evt.kind === "turn-end") {
+        finEnd = evt;
+      } else if (evt.kind === "tool-call") {
+        // 工具已禁用，正常不会触发；防御性忽略，避免悬空 tool_call
+      } else {
+        yield evt;
+      }
+    }
+    if (finText) {
+      messages = [...finMsgs, { role: "assistant", text: finText }];
+    }
+    const allText = gatherAssistantText(messages);
+    if (allText) yield* validateAnswerRefs(allText);
+    yield finEnd ?? { kind: "turn-end", reason: "stop" };
+  }
+
   while (turnIdx < MAX_TURNS) {
     if (input.signal?.aborted) {
       yield { kind: "turn-end", reason: "error", error_message: "客户端已断开" };
@@ -318,12 +357,29 @@ export async function* runAgent(
 
     if (reason === "tool_use" && turnToolCalls.length > 0) {
       if (toolsUsed + turnToolCalls.length > toolBudget) {
-        yield turnEndEvent;
+        // 预算用尽：这批 tool_calls 不执行，但仍回 synthetic 失败结果——满足 OpenAI 协议
+        // （assistant 的每个 tool_call 必须有对应 tool 响应，否则收尾轮的 API 调用会报错），
+        // 然后跑一轮禁用工具的收尾，逼出【ANSWER】，避免「半截工具调用、没有答案」。
         yield {
-          kind: "turn-end",
-          reason: "budget_exceeded",
-          error_message: `已达工具预算上限 (${toolBudget})`,
+          kind: "status",
+          text: `工具预算已用尽（上限 ${toolBudget}），基于已读到的内容收尾…`,
+          level: "warn",
         };
+        const skipped: ToolResultRecord[] = [];
+        for (const tc of turnToolCalls) {
+          const err = `工具预算已用尽（上限 ${toolBudget}），此调用未执行`;
+          yield {
+            kind: "tool-result",
+            id: tc.id,
+            name: tc.name,
+            ok: false,
+            error: err,
+            duration_ms: 0,
+          };
+          skipped.push({ id: tc.id, ok: false, error: err });
+        }
+        messages = [...messages, { role: "user", tool_results: skipped }];
+        yield* finalizeWithoutTools();
         return;
       }
 
@@ -405,9 +461,11 @@ export async function* runAgent(
     return;
   }
 
+  // 轮数用尽：同样跑一轮禁用工具的收尾，逼出【ANSWER】，而不是干脆没有答案。
   yield {
-    kind: "turn-end",
-    reason: "budget_exceeded",
-    error_message: `达到最大轮数 ${MAX_TURNS}`,
+    kind: "status",
+    text: `已达最大轮数 ${MAX_TURNS}，基于已读到的内容收尾…`,
+    level: "warn",
   };
+  yield* finalizeWithoutTools();
 }

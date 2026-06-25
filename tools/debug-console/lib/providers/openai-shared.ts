@@ -75,11 +75,14 @@ export async function* streamOpenAI(
 
   let stream;
   try {
+    // disable_tools：收尾轮不提供 tools，模型只能出文本（强制 ANSWER、不再调工具）。
+    const toolParams = input.disable_tools
+      ? {}
+      : { tools, tool_choice: "auto" as const };
     stream = await client.chat.completions.create({
       model: input.model,
       messages,
-      tools,
-      tool_choice: "auto",
+      ...toolParams,
       stream: true,
       ...(extra ?? {}),
     } as OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming &

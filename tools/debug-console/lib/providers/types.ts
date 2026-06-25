@@ -32,6 +32,9 @@ export interface TurnInput {
   messages: ChatMessage[];
   /** 工具调用预算上限（仅 agent loop 用；provider 自身不强制）*/
   tool_budget?: number;
+  /** 禁用工具：本轮不提供 tools，强制模型只出文本。
+   *  agent-loop 在「工具预算/轮数用尽」时用它跑一轮收尾 turn，逼出【ANSWER】、不再调工具。 */
+  disable_tools?: boolean;
   /** 客户端断开信号——provider 应监听并尽快清理（kill subprocess、abort fetch 等）*/
   signal?: AbortSignal;
 }
