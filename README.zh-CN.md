@@ -55,7 +55,7 @@ flowchart LR
 - npm
 
 ```bash
-git clone https://github.com/your-org/groundmap.git
+git clone https://github.com/Qinbf/groundmap.git
 cd groundmap
 
 make setup
