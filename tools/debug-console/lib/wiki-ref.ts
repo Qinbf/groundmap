@@ -280,7 +280,8 @@ export function refToToolCall(ref: WikiRef): { tool: string; args: Record<string
 
 /** 主管理台 web/ 的页面深链 */
 export function refToAdminUrl(ref: WikiRef, kbBase = "http://localhost:3006"): string {
-  // 主管理台路由：/page/<path-without-.md>（不带 anchor 支持，仅整页）
-  const cleanPath = ref.path.replace(/\.md$/, "");
-  return `${kbBase}/page/${cleanPath}`;
+  // 主管理台路由 /page/<path>：**必须带 .md** —— 该路由的 getPage 按完整相对路径查文件，
+  // 去掉 .md 会 404（实测：/page/wiki/sources/X 404、/page/wiki/sources/X.md 200）。不带 anchor，仅整页。
+  const p = ref.path.endsWith(".md") ? ref.path : `${ref.path}.md`;
+  return `${kbBase}/page/${p}`;
 }
