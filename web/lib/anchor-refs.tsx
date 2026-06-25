@@ -279,7 +279,7 @@ export const ANCHOR_COMPONENTS: Components = (() => {
  * "裸"版本：通过 extractTrailingAnchor 剥离 anchor 文本（避免视觉污染），
  * 但**不**输出 HTML id、**不**渲染 [n] 上标。
  *
- * 适用场景：MiniMarkdown / BlocksTable / learn 等局部预览渲染。
+ * 适用场景：MiniMarkdown / BlocksTable 等局部预览渲染。
  * 这些场景下：
  * - 加 id 会与外层主页面的 PageRenderer 渲染的同 anchor 元素冲突（同 DOM 树重复 id）
  * - 加 [n] 上标需要 registry 兜底；局部 registry 与主页面 registry 不一致会混淆
