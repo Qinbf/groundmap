@@ -36,7 +36,7 @@ export function WorkspaceSwitcher() {
     if (!ws || ws === current) return;
     document.cookie = `${WORKSPACE_COOKIE}=${ws}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
     // 页面级路由（/page/、/blocks/）的具体页在新 workspace 里多半不存在 → 回首页避免 404；
-    // 其余路由（/health、/graph、/learn… 按当前 workspace 渲染）原地刷新即可。
+    // 其余路由（/health、/graph 等 按当前 workspace 渲染）原地刷新即可。
     const p = window.location.pathname;
     if (p.startsWith("/page/") || p.startsWith("/blocks/")) {
       window.location.assign("/");

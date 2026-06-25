@@ -20,62 +20,14 @@ export const TRANSLATIONS = {
     "nav.browse": "浏览",
     "nav.health": "健康度",
     "nav.graph": "图谱",
-    "nav.demos": "演示",
-    "nav.learn": "教学",
-    "nav.learn.desc": "ingest / query 工作流的交互演示",
-    "nav.walkthrough": "查询讲解",
-    "nav.walkthrough.desc": "真实查询的逐步回放",
     "nav.console": "查询控制台",
     "nav.aria.breadcrumb": "面包屑导航",
 
-    "walkthrough.chinese_only_notice": "本页演练内容目前仅提供中文。",
-    "walkthrough.domain_note": "例子取自一个「RAG 演化史」知识库——用一个不做向量召回的工具去查关于 RAG 的知识；但「分层钻取」的查询流程对任何领域的知识库都一样。",
-    "walkthrough.reproduce.title": "真实运行记录，可复现",
-    "walkthrough.reproduce.body": "本例每一步都对应一次真实工具调用，返回的命中评分、anchor、冲突文本都从仓库直接抓取。在仓库下用同样命令即可复现：",
 
     // ── 推理图（与查询控制台一致的 FlowGraph）讲解 ──
-    "walkthrough.graph.title": "推理图（与查询控制台一致）",
-    "walkthrough.graph.subtitle": "和「查询控制台」是同一套卡片与解析逻辑；为适配讲解页，布局排成了换行网格。下面这条是上面那个问题真实跑出来的轨迹。",
-    "walkthrough.graph.hint": "点任意卡片 → 右侧讲解它是什么、并跳到下方对应的讲解步骤。可拖拽画布 / 滚轮缩放。",
-    "walkthrough.graph.counts": "{n} 张卡片 · {e} 条连线",
-    "walkthrough.legend.title": "卡片图例",
-    "walkthrough.legend.query": "起始问题",
-    "walkthrough.legend.thought": "思考（按类型染色）",
-    "walkthrough.legend.search": "搜索",
-    "walkthrough.legend.file": "文件（按 type 染色）",
-    "walkthrough.legend.list": "查链接",
-    "walkthrough.legend.result": "最终答案",
-    "walkthrough.legend.badge_step": "左上数字 = 对应讲解步骤号",
-    "walkthrough.legend.badge_hit": "右上 ×N = 同一文件被读 N 次",
 
-    "walkthrough.detail.ready": "点一张卡片查看讲解",
-    "walkthrough.detail.ready_hint": "图里每张卡片都对应下方一个讲解步骤。点卡片可跳到该步骤、看真实的工具参数与返回。",
-    "walkthrough.detail.what": "这是什么卡片",
-    "walkthrough.detail.corresponds": "对应讲解步骤",
-    "walkthrough.detail.jump": "跳到该步骤 →",
-    "walkthrough.detail.tool": "工具调用：",
-    "walkthrough.detail.result": "返回（真实数据）",
-    "walkthrough.detail.thought_full": "完整内容",
-    "walkthrough.detail.close": "关闭",
 
-    "walkthrough.detail.step_note": "这一步在做什么",
-    "walkthrough.card.query": "起始卡片 · 用户的原始问题。整条推理链都从这里出发——AI 先读懂「问的到底是什么」，再决定怎么查。这类问题往往不止一层（这里就含「要不要上」与「社区检测是否必须」两个子问题），后面每一步都在回应它。",
-    "walkthrough.card.search": "搜索卡片 · 一次 BM25 全文检索。这是知识库唯一的「找相关内容」手段——没有向量库、不切片、不做 embedding 召回，靠关键词全文匹配 + 元数据过滤。标题是查询词，点开能看到真实命中列表（按 BM25 分数排序）。注意：搜索只负责「召回候选」，谁先读由下一步按页面类型决定，而不是按分数。",
-    "walkthrough.card.list": "关系卡片 · outlinks / backlinks 这类「查链接关系」的工具。它不读正文，只回答「这个页面连向了谁 / 被谁连」——用来顺着双链顺藤摸瓜，判断要不要继续下钻到底层来源，或横向跳到相关概念。",
-    "walkthrough.card.result": "答案卡片 · 最终回复。它把前面读到的内容组合成结构化答案，每条实质论断都挂着块级 anchor（精确到段的引用），并把不同来源的冲突原样保留、而非平均成一句中庸结论。这正是传统 chunk-RAG 做不到的：可精确溯源 + 冲突可见。",
-    "walkthrough.card.file_concept": "concept（概念）文件 · 聚合层。它把多个底层 source 综合成一份带 anchor 的摘要，是大多数查询的首选落点——读它一篇，往往就拿到被综合过的核心结论 + 通往一手来源的链接。frontmatter 的 source_count 会告诉你它综合了几个来源。",
-    "walkthrough.card.file_analysis": "analysis / comparison 文件 · 综合层。它跨多个来源做对照与论断，回答「这些东西怎么比、这场争议怎么收」。当一个概念页里挂着未决冲突时，对应的 analysis 页常给出更上层的判断——按什么维度选型，而非简单地谁更好。",
-    "walkthrough.card.file_source": "source（来源摘要）文件 · 底层。每个 source 绑定一个 raw 原文（一篇论文 / 一份资料），是论断的一手出处。当上层 concept 已把它综合过、关键分歧也已暴露时，通常不必逐个再读，除非要核对原始细节。",
-    "walkthrough.card.file_index": "index（MOC）文件 · 导航层。它只做目录、给出通往各页面的入口，本身不含论断。它的 BM25 分数常常最高（汇集了大量关键词），却恰恰不该第一个读——这就是「分数高 ≠ 该先读」的典型。",
-    "walkthrough.card.file_other": "文件卡片 · AI 读取的一个 wiki 页面，颜色按页面 type 区分（concept / analysis / source / index）。",
 
-    "walkthrough.thought.generic": "一步思考 · AI 的中间推理。卡片只显示类型与一句标题，点开能看完整的思考过程。",
-    "walkthrough.thought.intent": "意图解析 · 推理的第一步。AI 在这里拆出实体、子问题、用户身份与期望粒度，并判断这是不是「正确答案陷阱」——即用户要的不是中庸结论而是真实分歧。意图理解错了，后面查得再多也是答非所问。",
-    "walkthrough.thought.strategy": "路径决策 · 决定怎么查。常见两条路：从 root_index 逐层钻取，或直接 BM25 搜索。AI 按问题特征选最短的一条——术语越独特，越倾向直接搜索一击命中。",
-    "walkthrough.thought.eval": "命中评估 · 拿到搜索结果后的关键取舍。AI 按页面 type 的优先级（concept > analysis/comparison > source > index）决定先读谁，而不是单纯按 BM25 分数——因为分数最高的常是不含论断的导航层 index。",
-    "walkthrough.thought.extract": "信息抽取 · 从页面正文摘出与问题相关的关键论断，并同时记下每条论断的块级 anchor 出处。anchor 是最终答案能精确溯源（渲染成论文式 [n] 上标）的前提。",
-    "walkthrough.thought.conflict": "冲突识别 · 整个流程里最能体现知识库价值的一步。AI 撞见正文里的 [!WARNING] 知识冲突块——不同来源对同一问题给出对立结论。知识库没有把分歧抹平，而是显式保留双方 + 标注状态（如 keep_watching）。于是「有争议」本身成了诚实答案的一部分。",
-    "walkthrough.thought.decide": "扩散决策 · 决定下一步读什么、以及何时停。AI 在多个候选里权衡（哪些已被综合可跳过、哪些是支线可暂缓），并在信息足够回答时主动停止扩散，避免无谓的过度检索。",
 
     "flow.empty": "(空)",
     "flow.truncated": "…(已截断)",
@@ -337,135 +289,36 @@ export const TRANSLATIONS = {
     "action.error.generic": "操作失败",
 
     // ========== /learn 教学演示页 ==========
-    "learn.title": "知识库 ingest 全流程演示",
-    "learn.subtitle": "看一份文件如何在 10 步内从 raw/ 走到你的知识库",
-    "learn.chinese_only_notice": "本页演示样例（文档原文与各步产物预览）目前仅提供中文。",
-    "learn.intro.lead": "这页演示的是 GroundMap 的「工作机制本身」，不是教某个领域的知识——下面用一份 RAG 奠基论文做载体，但这 10 步流程对任何领域的资料（合同、病历、财报、调研笔记……）都一模一样。跟着走一遍，看一份文件如何被转换、阅读、消化、关联，最终成为知识库里能被精确引用的知识。无须懂 markdown / git / 命令行——所有专业词第一次出现时旁边都有「？」可以点开看 30 秒解释。",
 
-    "learn.sample.research": "经典论文",
-    "learn.sample.research.subtitle": "Retrieval-Augmented Generation (Lewis et al. 2020)",
 
-    "learn.overview.label": "30 秒看懂",
-    "learn.overview.beat1.title": "出发：一份文件躺在硬盘里",
-    "learn.overview.beat1.body": "可能是一篇刚下载的论文 PDF、一份团队内传的 RFC、或者一份会议纪要。它的价值都锁在自己肚子里——你下次想引用具体某段时，只能凭印象大海捞针。",
-    "learn.overview.beat2.title": "拆解：被切成可引用的最小单位",
-    "learn.overview.beat2.body": "AI 把它转成 markdown，给每段、每张表、每段代码贴一个永久不变的「地址」（锚点）。从此你可以精确指向「第 3 段第 7 句话」而不是「那篇文章」。",
-    "learn.overview.beat3.title": "连通：你的知识库长出新枝节",
-    "learn.overview.beat3.body": "AI 把这次摄入和已有知识做关联：新建一份摘要页、立刻更新最相关的几个核心概念、把次要影响标「稍后处理」、在领域索引里加一笔。下次你查询时，论文的具体段落、相关概念页、领域索引会一起浮出来。",
 
-    "learn.col.why": "为什么要这步",
-    "learn.col.what": "实际操作",
-    "learn.col.result": "产物",
-    "learn.result.empty": "（这一步没有产物）",
 
-    "learn.step.1.title": "把原始文件转成 markdown，加上锚点",
-    "learn.step.1.why": "原始文件可能是 PDF、Word 或网页。先统一成 markdown，并给每个段落、表格、代码块贴一个不会变的「地址标签」（叫锚点），后续才能精确引用到具体某段，而不是只引用整篇。",
 
-    "learn.step.2.title": "看大纲，AI 自动决定怎么读",
-    "learn.step.2.why": "新文档可能很长。`k.py outline` 不是只列标题——它把**每个 H 段的首段前 120 字预览**也一并打出来，让 AI 在不读正文的情况下就有「标题 + 字符数 + 首段预览」三层信息可用，能更准地判断「这一节值不值得深读」。AI 看完后**自决**阅读策略，按 `doc_chars` 三档处理：① **短文**（<3 万字符）一次 Read 全文；② **中长文**（3-15 万字符，论文/报告级）按 H1 切块、每块 ≤3 万分段读，每段读完**必须**调 `annotate-section` 用 LLM 摘要替换预览；③ **整本书规模**（>15 万字符）TOC 扫全 + AI 决定哪些章节深读，**全部**章节都登记到摘要页的「章节深度登记」表，扫读 / 跳过的章节保留 partial re-ingest 升级路径。**注**：① 档短文对 `annotate-section` 不强制；③ 档扫读章节的知识权重低，查询时若被命中应回看 source_summary 的深度登记再决定是否触发 partial re-ingest。单次 Read 严格 ≤3 万字符以避免 LLM「lost in the middle」衰减。",
 
-    "learn.step.3.title": "AI 综合判断（基于 wiki 现状）",
-    "learn.step.3.why": "AI 不孤立地总结原文，而是先用 `k.py search` 把相关 wiki 页面拉出来轻读一遍，然后**自动**综合三件事：核心价值（新东西在哪）/ 关联（哪些 wiki 页有重叠）/ 冲突（哪些论断打架）。这些判断会写入摘要页的「AI 综合判断」节，便于你日后审计或在 web 端覆盖。",
 
-    "learn.step.4.title": "决定写作策略",
-    "learn.step.4.why": "基于第 3 步的综合判断，AI 自动决定写作产物的组合：新建 1 份摘要页、更新哪几个核心概念页、给哪几个次要页贴「稍后处理」。决策表落到第 5-7 步执行——CLAUDE.md 的 13 步 ingest 流程里没有「中途放弃 ingest」这个节点（放不放文件由用户在第 1 步决定，进来之后流程就一次走完）。",
 
-    "learn.step.5.title": "建一份「摘要页」",
-    "learn.step.5.why": "把这次摄入消化为一份**类型为 `source_summary` 的 wiki 页面**（约定放在 `wiki/sources/` 下）：核心论点 + 关键数据 + 方法要点，每条都附「来自原文哪一段」的精确锚点引用，便于日后追溯。CLAUDE.md 规定 source_summary 必须 `source_count: 1`（一个摘要页绑定一份底层来源）+ `sources:` 数组里至少挂一个 `[[wiki/sources/X]]` 或 `[[raw/...]]`。",
 
-    "learn.step.6.title": "立刻更新 2-3 个最相关的核心页",
-    "learn.step.6.why": "这份新资料让某些核心概念页有了新内容——立刻把新论断 + 引用补到那些页面里，趁脑子还热着。",
 
-    "learn.step.7.title": "其他次要页贴个「稍后处理」便利贴",
-    "learn.step.7.why": "受影响的页面可能有十几个，全部立刻改不现实。在剩下的页面底部贴个 #to-be-updated 标记，下周做健康检查时统一处理——这就是「懒更新」哲学。",
 
-    "learn.step.8.title": "更新 MOC（AI 自动判断领域归属）",
-    "learn.step.8.why": "MOC 是「目录页」——告诉读者这个领域里有哪些重要页面。AI 用摘要页的 tags 自动匹配现有 MOC：能匹配就在它的「近期更新」节追加一条；匹配不到（首次进入新领域）就自动新建一个 MOC，scope 由 tag 决定，并在 root_index 加入口。归属错了 lint 流程会标出，可在 web 端纠正。",
 
-    "learn.step.9.title": "在操作日志里写一笔",
-    "learn.step.9.why": "log.md 是知识库的「操作流水账」。记下「今天 ingest 了什么、新建/修改了哪些页、为什么」。一周后回看时能立刻回忆起当时的脉络。",
 
-    "learn.step.10.title": "打成一个 git commit，可回退",
-    "learn.step.10.why": "把这次产生的所有改动打包成一个「快照」。日后想回到这次摄入之前的状态，一行命令就行——不会因为某次失误丢失工作。",
 
-    "learn.diagram.raw": "原始文件",
-    "learn.diagram.outline": "大纲",
-    "learn.diagram.summary": "摘要页",
-    "learn.diagram.wiki": "Wiki 节点",
-    "learn.diagram.moc": "索引 (MOC)",
-    "learn.diagram.log": "操作日志",
-    "learn.diagram.commit": "Git 快照",
 
-    "learn.diff.before": "改动前",
-    "learn.diff.after": "改动后",
 
-    "learn.commit.hash_label": "提交编号",
-    "learn.commit.message_label": "提交说明",
-    "learn.commit.files_label": "本次涉及的文件",
-    "learn.commit.what_is": "Git commit 就是把这一刻相关文件的状态打成一张「快照」。日后想回到任何一张快照，一条命令就行。",
-    "learn.commit.created": "新建",
-    "learn.commit.modified": "修改",
-    "learn.commit.tagged": "标记 #to-be-updated",
-    "learn.commit.log": "追加日志",
 
-    "learn.caption.tier_table": "分级规则参考——这是给你看的说明，不是知识库里的文件。阈值是文件字符总数（`k.py outline` 报的 doc_chars），与中英文字无关——CLAUDE.md 的「3 万中文字」是粗略描述，实际 k.py 直接按 doc_chars 比对阈值。",
-    "learn.caption.recall_mechanism": "机制说明，不是文件——讲清楚「字面 search 为什么够用」的设计取舍。",
-    "learn.caption.synthesis_internal": "AI 内部判断——第 5 步会固化为 source_summary 的「AI 综合判断」节。",
-    "learn.caption.strategy_internal": "AI 内部决策——直接驱动后续 5-7 步操作。",
-    "learn.caption.log_prepend": "按时间顺序追加到 log.md（最新条目在最上面），符合 CLAUDE.md「log.md 条目格式」模板。",
-    "learn.caption.new_page": "新建页面——此前 wiki 中不存在。",
-    "learn.caption.commit_scope": "为什么 git add 不含 raw/ 下的派生 .md / .outline.json？raw/ 及其派生物默认被 .gitignore 排除、不入库——提交只含 wiki 与 log。",
 
-    "learn.search.query_label": "搜索",
-    "learn.search.no_hits": "没有命中——这是个全新主题，wiki 里还没有相关页面。",
-    "learn.search.hits_count": "{n} 条命中",
-    "learn.search.score": "得分",
-    "learn.search.score_formula": "score = 标题命中次数 × 5 + 正文命中次数 × 1（k.py search 实际算法；按总分降序）",
 
-    "learn.concept.markdown.title": "什么是 Markdown？",
-    "learn.concept.markdown.body": "一种用纯文本写带格式的文档的方式。用 # 表示标题，- 表示列表，** 表示加粗。优点是：永远能用记事本打开，不会被某个软件锁定。本知识库的所有页面都是 markdown 文件。",
 
-    "learn.concept.anchor.title": "什么是锚点？",
-    "learn.concept.anchor.body": "段落末尾形如 ^p-3-8cdffd 的小标记。它是这一段的「地址」，永久不变。其他页面引用这一段时写 [[文件名#^p-3-8cdffd]]，就能精确指向「这一段」而不是整篇。",
 
-    "learn.concept.frontmatter.title": "什么是 Frontmatter？",
-    "learn.concept.frontmatter.body": "markdown 文件最顶部用 --- 包起来的一段「页面说明」：标题、类型、创建日期、标签等等。它是给程序看的元数据，让知识库能按类型/状态/标签筛选页面。",
 
-    "learn.concept.wikilink.title": "什么是 [[双链]]？",
-    "learn.concept.wikilink.body": "wiki 页面之间互相引用的写法。在文档里写 [[wiki/concepts/attention_mechanism]] 就在两页之间建立了一个连接。这就是「网状知识图谱」的基本元件——任何两个相关概念都能直接连起来，不用走目录。",
 
-    "learn.concept.moc.title": "什么是 MOC？",
-    "learn.concept.moc.body": "Map of Content（内容地图）。一个用 [[link]] 列表组织其他页面的「目录页」。和文件夹的区别：一个页面可以同时被多个 MOC 收录，没有归属唯一性。",
 
-    "learn.concept.git.title": "什么是 Git Commit？",
-    "learn.concept.git.body": "Git 是一个文件版本管理工具。每次「commit」会把当前所有文件的状态打成一张快照，给一个唯一编号。你可以随时回到任何快照——这就像游戏存档：不怕走错路。",
 
-    "learn.concept.source_summary.title": "什么是 source_summary？",
-    "learn.concept.source_summary.body": "「来源摘要页」。把一份原始资料消化为一个 wiki 页，写下核心论点 + 关键数据，每条都附原文引用。它是「我读完这篇资料后觉得最有价值的部分」的提炼，而不是原文翻版。约定放在 `wiki/sources/` 目录下，frontmatter 的 `type: source_summary`。",
 
-    "learn.concept.to_be_updated.title": "什么是 #to-be-updated？",
-    "learn.concept.to_be_updated.body": "一种「便利贴」标签。某个页面受新资料影响但暂时没改完时，在它底部贴这个标签，下周清单时统一处理。避免一次摄入要改十几个页面的情况。",
 
-    "learn.scrollnav.label": "步骤导航",
-    "learn.scrollnav.aria": "跳到步骤 {n}",
 
-    "learn.rawpane.label": "原文",
-    "learn.rawpane.active": "← 当前步骤",
-    "learn.rawpane.no_anchor": "（无锚点）",
-    "learn.rawpane.frontmatter_label": "frontmatter",
-    "learn.rawpane.intro": "这是被 ingest 的原文。右栏每一步都会对应到这里的某些段落——蓝色高亮就是「现在 AI 正在看 / 引用 这一段」。",
 
-    "learn.cmd.note.convert": "扫描所有 raw/ 文件，转 markdown 并加锚点",
-    "learn.cmd.note.outline": "查看一篇文档的章节树",
-    "learn.cmd.note.search": "在 wiki/ 里搜关键词",
-    "learn.cmd.note.write": "（这一步是 AI 直接写文件，没有命令）",
-    "learn.cmd.note.edit": "（这一步是 AI 修改已有文件，没有命令）",
-    "learn.cmd.note.git_commit": "把待提交区的改动打包成一个快照",
 
-    "learn.next.title": "下一步去哪？",
-    "learn.next.walkthrough": "看查询流程演练——经过 ingest 的知识，提问时是怎么被层层钻取、精确引用出来的",
-    "learn.next.tutorial": "读完整搭建教程，从零把知识库在自己机器上跑起来：",
-    "learn.next.try": "把你的第一份文件放进 raw/ 对应子目录，对 AI 说「摄入它」，跑一遍真实的 ingest",
 
     // ========== /graph 图谱页 ==========
     "graph.title": "知识图谱",
@@ -508,60 +361,12 @@ export const TRANSLATIONS = {
     "nav.browse": "Browse",
     "nav.health": "Health",
     "nav.graph": "Graph",
-    "nav.demos": "Demos",
-    "nav.learn": "Learn",
-    "nav.learn.desc": "Interactive ingest / query workflow demo",
-    "nav.walkthrough": "Walkthrough",
-    "nav.walkthrough.desc": "Step-by-step replay of real queries",
     "nav.console": "Console",
-    "walkthrough.chinese_only_notice": "This walkthrough is currently available in Chinese only.",
-    "walkthrough.domain_note": "The example is drawn from a knowledge base about the evolution of RAG — using a tool that does no vector retrieval to query knowledge about RAG; the layered drill-down query flow is the same for a knowledge base in any field.",
-    "walkthrough.reproduce.title": "Real run, reproducible",
-    "walkthrough.reproduce.body": "Every step of this example maps to a real tool call; the hit scores, anchors, and conflict text are pulled straight from the repo. Reproduce it with the same commands:",
 
     // ── Reasoning graph (same FlowGraph as the query console) ──
-    "walkthrough.graph.title": "Reasoning graph (same as the query console)",
-    "walkthrough.graph.subtitle": "Same cards and parsing logic as the Query Console; the layout is wrapped into a grid to fit this page. The trace below is the real run of the question above.",
-    "walkthrough.graph.hint": "Click any card → the panel explains what it is and jumps to its matching step below. Drag the canvas / scroll to zoom.",
-    "walkthrough.graph.counts": "{n} cards · {e} edges",
-    "walkthrough.legend.title": "Card legend",
-    "walkthrough.legend.query": "Starting question",
-    "walkthrough.legend.thought": "Thought (colored by type)",
-    "walkthrough.legend.search": "Search",
-    "walkthrough.legend.file": "File (colored by type)",
-    "walkthrough.legend.list": "Link lookup",
-    "walkthrough.legend.result": "Final answer",
-    "walkthrough.legend.badge_step": "Top-left number = matching step",
-    "walkthrough.legend.badge_hit": "Top-right ×N = file read N times",
 
-    "walkthrough.detail.ready": "Click a card to see its explanation",
-    "walkthrough.detail.ready_hint": "Every card maps to a step below. Click one to jump to that step and see the real tool args and result.",
-    "walkthrough.detail.what": "What this card is",
-    "walkthrough.detail.corresponds": "Matching step",
-    "walkthrough.detail.jump": "Jump to step →",
-    "walkthrough.detail.tool": "Tool call: ",
-    "walkthrough.detail.result": "Result (real data)",
-    "walkthrough.detail.thought_full": "Full content",
-    "walkthrough.detail.close": "Close",
 
-    "walkthrough.detail.step_note": "What this step does",
-    "walkthrough.card.query": "Starting card · the user's original question. The whole reasoning chain begins here — the AI first works out 'what is really being asked', then decides how to look it up. Such questions often have more than one layer (here: 'should we adopt it' and 'is community detection required'), and every later step answers back to it.",
-    "walkthrough.card.search": "Search card · one BM25 full-text query. This is the knowledge base's only 'find relevant content' mechanism — no vector store, no chunking, no embedding recall, just keyword full-text matching + metadata filtering. The title is the query; open it for the real hit list (ranked by BM25 score). Note: search only recalls candidates; which one to read first is decided next by page type, not by score.",
-    "walkthrough.card.list": "Relation card · link-lookup tools like outlinks / backlinks. They don't read the body, only answer 'which pages does this page link to / get linked from' — used to follow the wikilinks and decide whether to drill into underlying sources or hop sideways to related concepts.",
-    "walkthrough.card.result": "Answer card · the final reply. It composes everything read so far into a structured answer, with every substantive claim carrying a block-level anchor (paragraph-precise citation), and conflicts between sources preserved verbatim rather than averaged into a bland middle. This is exactly what classic chunk-RAG cannot do: precise provenance + visible conflict.",
-    "walkthrough.card.file_concept": "concept file · aggregation layer. It synthesizes several underlying sources into one anchored summary, the preferred landing spot for most queries — reading this one page often gives you the synthesized core conclusions plus links to the first-hand sources. The frontmatter's source_count tells you how many sources it synthesized.",
-    "walkthrough.card.file_analysis": "analysis / comparison file · synthesis layer. It contrasts and adjudicates across multiple sources, answering 'how do these compare, how does this dispute resolve'. When a concept page carries an unresolved conflict, the matching analysis page often gives the higher-level call — by which dimension to choose, not simply who is better.",
-    "walkthrough.card.file_source": "source-summary file · base layer. Each source is bound to one raw original (a paper / a document) and is the first-hand provenance for a claim. Once an upper concept has synthesized it and the key disagreement is already exposed, you usually don't need to read each one again unless verifying raw detail.",
-    "walkthrough.card.file_index": "index (MOC) file · navigation layer. It is only a table of contents giving entry points to pages and carries no claims of its own. Its BM25 score is often the highest (it aggregates many keywords), yet it is precisely what you should not read first — the textbook case of 'high score ≠ read it first'.",
-    "walkthrough.card.file_other": "File card · a wiki page the AI read, colored by page type (concept / analysis / source / index).",
 
-    "walkthrough.thought.generic": "A thinking step · the AI's intermediate reasoning. The card shows only the type and a one-line title; open it for the full thought.",
-    "walkthrough.thought.intent": "Intent parsing · the first step of reasoning. The AI extracts entities, sub-questions, the user's role and the expected granularity, and judges whether this is a 'right-answer trap' — i.e. the user wants the real disagreement, not a bland middle. Misread the intent and no amount of later searching will answer the actual question.",
-    "walkthrough.thought.strategy": "Path decision · how to look it up. Two common routes: drill down layer by layer from root_index, or search BM25 directly. The AI picks the shorter one by the question's features — the more distinctive the terms, the more it favors a direct one-shot search.",
-    "walkthrough.thought.eval": "Hit evaluation · the key trade-off after getting search results. The AI decides what to read first by page-type priority (concept > analysis/comparison > source > index) rather than raw BM25 score — because the top score is often a navigation-layer index with no claims.",
-    "walkthrough.thought.extract": "Information extraction · pulls the claims relevant to the question out of the page body, recording each claim's block-level anchor provenance at the same time. Anchors are what let the final answer cite precisely (rendered as paper-style [n] superscripts).",
-    "walkthrough.thought.conflict": "Conflict spotting · the step that best shows the knowledge base's value. The AI hits a [!WARNING] knowledge-conflict block in the body — different sources giving opposing conclusions on the same question. The knowledge base does not flatten the disagreement; it preserves both sides explicitly plus a status (e.g. keep_watching). So 'it's contested' itself becomes part of the honest answer.",
-    "walkthrough.thought.decide": "Spread decision · decides what to read next and when to stop. The AI weighs the candidates (which are already synthesized and can be skipped, which are side-branches to defer) and proactively stops spreading once it has enough to answer, avoiding pointless over-retrieval.",
 
     "flow.empty": "(empty)",
     "flow.truncated": "…(truncated)",
@@ -824,135 +629,36 @@ export const TRANSLATIONS = {
     "action.error.generic": "Operation failed",
 
     // ========== /learn teaching demo page ==========
-    "learn.title": "Ingest pipeline: file → knowledge base",
-    "learn.subtitle": "Watch a file travel from raw/ into your knowledge base in 10 steps",
-    "learn.chinese_only_notice": "The demo fixtures on this page (sample document and per-step result previews) are currently available in Chinese only.",
-    "learn.intro.lead": "This page demonstrates how GroundMap works — it is not a course on any one field. The sample below is a foundational RAG paper, but the same 10 steps apply to material from any domain (contracts, medical records, financial reports, field notes…). Follow along to watch a file get converted, read, digested, and linked until it becomes precisely-citable knowledge in your wiki. No markdown/git/CLI experience needed — every technical term has a clickable ? for a 30-second explanation.",
 
-    "learn.sample.research": "Landmark paper",
-    "learn.sample.research.subtitle": "Retrieval-Augmented Generation (Lewis et al. 2020)",
 
-    "learn.overview.label": "30-second overview",
-    "learn.overview.beat1.title": "Start: a file sits on your disk",
-    "learn.overview.beat1.body": "Maybe a paper PDF you just downloaded, an RFC circulating in your team, or meeting notes. Its value is locked inside — next time you want to cite a specific passage, you're left fishing from memory.",
-    "learn.overview.beat2.title": "Decompose: cut into citable atoms",
-    "learn.overview.beat2.body": "AI converts it to markdown and tags every paragraph, table, and code block with a stable address (an anchor). From now on you can point at \"paragraph 3, sentence 7\" rather than \"that article.\"",
-    "learn.overview.beat3.title": "Connect: your knowledge base grows new branches",
-    "learn.overview.beat3.body": "AI relates this ingest to existing knowledge: create a summary page, immediately update the most-relevant core concepts, tag secondary impacts as 'handle later,' append an entry to the domain index. Next time you query, the specific passage, related concept pages, and domain index surface together.",
 
-    "learn.col.why": "Why this step",
-    "learn.col.what": "Actual command",
-    "learn.col.result": "Result",
-    "learn.result.empty": "(no result for this step)",
 
-    "learn.step.1.title": "Convert to markdown and add anchors",
-    "learn.step.1.why": "Originals may be PDF, Word, or web pages. First we standardize to markdown and tag each paragraph, table, and code block with a stable address (an 'anchor') — that's what later lets us cite a specific paragraph rather than the whole document.",
 
-    "learn.step.2.title": "Look at outline, AI auto-decides reading approach",
-    "learn.step.2.why": "Documents can be long. `k.py outline` doesn't just print headings — it also includes **a 120-char preview of each H-section's first paragraph**, so AI has three layers of info (title + char count + first-para preview) without reading the body. This makes the \"is this section worth a deep read?\" judgment far sharper. AI then **decides on its own** in three tiers by `doc_chars`: ① **Short** (<30K chars) — Read whole at once. ② **Medium-long** (30K–150K chars, paper/report scale) — split by H1, each chunk ≤30K, **must** call `annotate-section` after each chunk to swap in an LLM summary. ③ **Book-scale** (>150K chars) — scan TOC, AI picks which chapters to deeply read; **all** chapters get registered in the summary's 'Chapter depth log' table, with skim/skip chapters retaining a partial re-ingest upgrade path. **Note**: tier ① doesn't mandate `annotate-section`; tier ③ scanned-section knowledge is lower-confidence, and if a query hits such a section the agent should re-check the depth registry on the source_summary before deciding whether to partial re-ingest. Single Read strictly ≤30K chars to avoid LLM 'lost in the middle' degradation.",
 
-    "learn.step.3.title": "AI synthesizes (in light of existing wiki)",
-    "learn.step.3.why": "AI doesn't summarize in a vacuum. It first uses `k.py search` to pull related wiki pages and lightly reads them, then **automatically** synthesizes three things: core value (what's new), relations (which wiki pages overlap), conflicts (which claims contradict). These judgments land in the summary page's 'AI synthesis' section for later audit or web-console override.",
 
-    "learn.step.4.title": "Decide the writing strategy",
-    "learn.step.4.why": "Based on Step 3's synthesis, AI auto-decides the writing combo: create one new summary page, update which core concept pages, tag which secondary pages 'handle later'. The decision matrix maps to Steps 5-7 — note that CLAUDE.md's 13-step ingest flow has no \"abandon the ingest mid-way\" node (whether to ingest is decided at Step 1 by the user dropping the file; once it starts, the flow runs to completion).",
 
-    "learn.step.5.title": "Create a 'source summary' page",
-    "learn.step.5.why": "Digest this source into a wiki page of type `source_summary` (by convention placed under `wiki/sources/`): key claims, key data, methodology — each item attached with a precise anchor citation pointing back to the original passage. CLAUDE.md requires source_summary to have `source_count: 1` (one summary page binds one underlying source) plus a `sources:` array containing at least one `[[wiki/sources/X]]` or `[[raw/...]]`.",
 
-    "learn.step.6.title": "Immediately update 2-3 most-relevant core pages",
-    "learn.step.6.why": "This new source genuinely adds something to certain core concept pages — go update those right now while context is hot, with proper citations.",
 
-    "learn.step.7.title": "Mark other affected pages 'handle later'",
-    "learn.step.7.why": "Pages affected can be a dozen — updating all immediately is unrealistic. Tag the rest with #to-be-updated at the bottom; clean them up in the weekly health check. This is the 'lazy update' philosophy.",
 
-    "learn.step.8.title": "Update MOC (AI auto-decides domain placement)",
-    "learn.step.8.why": "An MOC is an 'index page' — it tells readers which pages exist in this domain. AI uses the summary page's tags to auto-match an existing MOC; if matched, append to its 'recent updates' section. If no match (entering a new domain), AI creates a new MOC, scope based on tag, and adds an entry to root_index. Mis-classifications get caught by the lint flow and can be corrected in the web console.",
 
-    "learn.step.9.title": "Write an entry in the activity log",
-    "learn.step.9.why": "log.md is the knowledge base's 'operations journal' — a record of what was ingested, what changed, and why. A week later you can recall what this change was about.",
 
-    "learn.step.10.title": "Bundle into a git commit (rewindable)",
-    "learn.step.10.why": "Pack everything from this ingest into a single 'snapshot'. Want to roll back to before this ingest? One command. Nothing's ever lost.",
 
-    "learn.diagram.raw": "Raw file",
-    "learn.diagram.outline": "Outline",
-    "learn.diagram.summary": "Summary page",
-    "learn.diagram.wiki": "Wiki nodes",
-    "learn.diagram.moc": "Index (MOC)",
-    "learn.diagram.log": "Activity log",
-    "learn.diagram.commit": "Git snapshot",
 
-    "learn.diff.before": "Before",
-    "learn.diff.after": "After",
 
-    "learn.commit.hash_label": "Commit ID",
-    "learn.commit.message_label": "Message",
-    "learn.commit.files_label": "Files in this commit",
-    "learn.commit.what_is": "A git commit is a snapshot of related files at this moment. To roll back to any snapshot — one command.",
-    "learn.commit.created": "Created",
-    "learn.commit.modified": "Modified",
-    "learn.commit.tagged": "Tagged #to-be-updated",
-    "learn.commit.log": "Log appended",
 
-    "learn.caption.tier_table": "Tier-rules reference — an explainer for you, not a file in the knowledge base. The thresholds are file char totals (`k.py outline` reports `doc_chars`), with no language weighting — CLAUDE.md's \"30K Chinese chars\" is shorthand; k.py compares the raw doc_chars number directly.",
-    "learn.caption.recall_mechanism": "Mechanism explainer, not a file — why literal search is sufficient, by design.",
-    "learn.caption.synthesis_internal": "AI's internal synthesis — materialized in Step 5 as the source_summary's 'AI synthesis' section.",
-    "learn.caption.strategy_internal": "AI's internal decision — directly drives Steps 5-7.",
-    "learn.caption.log_prepend": "Appended to log.md in time order (newest at top), following the CLAUDE.md \"log.md entry format\" template.",
-    "learn.caption.new_page": "Newly created page — did not exist in the wiki before.",
-    "learn.caption.commit_scope": "Why doesn't git add include the derived .md / .outline.json under raw/? raw/ and its derivatives are excluded by .gitignore by default and never committed — the commit only includes wiki and log.",
 
-    "learn.search.query_label": "Search",
-    "learn.search.no_hits": "No hits — this is a brand-new topic; no related pages yet.",
-    "learn.search.hits_count": "{n} hits",
-    "learn.search.score": "score",
-    "learn.search.score_formula": "score = title hits × 5 + body hits × 1 (actual k.py search algorithm; sorted by total descending)",
 
-    "learn.concept.markdown.title": "What is Markdown?",
-    "learn.concept.markdown.body": "A way to write formatted text in plain text. Use # for headings, - for lists, ** for bold. The advantage: it always opens in any text editor, no software lock-in. Every page in this knowledge base is a markdown file.",
 
-    "learn.concept.anchor.title": "What is an anchor?",
-    "learn.concept.anchor.body": "A small marker like ^p-3-8cdffd at the end of a paragraph. It's that paragraph's permanent address. To cite this paragraph from another page, write [[file#^p-3-8cdffd]] — it points exactly to that one paragraph rather than the whole document.",
 
-    "learn.concept.frontmatter.title": "What is Frontmatter?",
-    "learn.concept.frontmatter.body": "A block of '---'-wrapped page metadata at the very top of a markdown file: title, type, created date, tags, etc. It's machine-readable info that lets the knowledge base filter pages by type/status/tag.",
 
-    "learn.concept.wikilink.title": "What is a [[wikilink]]?",
-    "learn.concept.wikilink.body": "How wiki pages reference each other. Writing [[wiki/concepts/attention_mechanism]] in a doc creates a connection between two pages. This is the basic building block of a 'networked knowledge graph' — any two related concepts can be linked directly without going through folders.",
 
-    "learn.concept.moc.title": "What is an MOC?",
-    "learn.concept.moc.body": "Map of Content. A 'directory page' organizing other pages via [[link]] lists. Difference from a folder: one page can be in multiple MOCs simultaneously — no exclusive ownership.",
 
-    "learn.concept.git.title": "What is a Git Commit?",
-    "learn.concept.git.body": "Git is a file versioning tool. Each 'commit' snapshots all current files and gives that snapshot a unique ID. You can rewind to any snapshot anytime — like save points in a game: never afraid to take a wrong turn.",
 
-    "learn.concept.source_summary.title": "What is source_summary?",
-    "learn.concept.source_summary.body": "A 'source summary page'. Distills one source into a wiki page with key claims and data, each attached with original-text citations. It's the 'most valuable parts after I read this' — not a copy of the original. By convention it lives under `wiki/sources/` with frontmatter `type: source_summary`.",
 
-    "learn.concept.to_be_updated.title": "What is #to-be-updated?",
-    "learn.concept.to_be_updated.body": "A 'sticky note' tag. When a page is affected by new material but you didn't finish updating it, attach this tag to its bottom and handle it together in the weekly cleanup. Avoids a single ingest forcing a dozen page edits.",
 
-    "learn.scrollnav.label": "Step nav",
-    "learn.scrollnav.aria": "Jump to step {n}",
 
-    "learn.rawpane.label": "Source",
-    "learn.rawpane.active": "← current step",
-    "learn.rawpane.no_anchor": "(no anchor)",
-    "learn.rawpane.frontmatter_label": "frontmatter",
-    "learn.rawpane.intro": "This is the original source being ingested. Each step on the right corresponds to certain blocks here — the blue highlight is \"the block AI is currently reading or citing.\"",
 
-    "learn.cmd.note.convert": "Scan all raw/ files, convert to markdown and add anchors",
-    "learn.cmd.note.outline": "Show one document's section tree",
-    "learn.cmd.note.search": "Keyword search inside wiki/",
-    "learn.cmd.note.write": "(This step writes a new file directly — no command)",
-    "learn.cmd.note.edit": "(This step edits an existing file — no command)",
-    "learn.cmd.note.git_commit": "Bundle staged changes into a snapshot",
 
-    "learn.next.title": "Where to next?",
-    "learn.next.walkthrough": "See the query walkthrough — how ingested knowledge gets drilled into and precisely cited at question time",
-    "learn.next.tutorial": "Read the full setup tutorial to get the knowledge base running on your own machine:",
-    "learn.next.try": "Drop your first file into the matching raw/ subfolder, tell the AI to ingest it, and run a real ingest",
 
     // ========== /graph page ==========
     "graph.title": "Knowledge Graph",

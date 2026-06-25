@@ -4,7 +4,7 @@ type: source_summary
 created_date: 2026-05-20
 last_modified: 2026-05-20
 last_modified_by: LLM
-status: reviewed
+status: draft
 confidence: high
 source_count: 1
 sources:

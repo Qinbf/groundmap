@@ -4,7 +4,7 @@ type: index
 created_date: 2026-05-20
 last_modified: 2026-06-12
 last_modified_by: LLM
-status: reviewed
+status: draft
 confidence: medium
 source_count: 0
 sources: []

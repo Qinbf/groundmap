@@ -2,7 +2,7 @@
 
 This guide gets a local GroundMap workspace running with the CLI, tests, health check, and Web console.
 
-> 📦 **Example `raw/` sources are not distributed with this repository** (copyright reasons; `workspaces/*/raw/` is excluded by `.gitignore`). The example workspaces ship their full `wiki/` pages, which remain completely browsable. After a fresh clone, `k.py health` reports **~287 broken references ("raw 文件不存在" / raw file missing) — this is expected and does not mean your installation failed**; only deep links into the missing raw source blocks are unresolved.
+> 📦 **Example `raw/` sources are not distributed with this repository** (copyright reasons; `workspaces/*/raw/` is excluded by `.gitignore`). The example workspaces ship their full `wiki/` pages, which remain completely browsable. After a fresh clone, `k.py health` reports a **nonzero number of broken references** ("raw 文件不存在" / raw file missing) and **source issues** (`broken-source-link`) — both are expected and do **not** mean your installation failed; they are the same raw-absent artifact (only the deep links into the missing raw blocks are unresolved). The exact count depends on which workspace is active (a bare command auto-selects the alphabetically-first example workspace).
 
 Hands-on companion examples live under `docs/examples/`; a step-by-step illustrated tutorial (Chinese) is at [docs/新手教程-手把手搭建知识库.md](新手教程-手把手搭建知识库.md).
 
@@ -46,7 +46,7 @@ This runs:
 - Web production build,
 - knowledge base health check.
 
-On a fresh clone the health check reports ~287 broken references, all with reason "raw 文件不存在" (raw file missing). This is the expected consequence of the example `raw/` sources not being distributed (see the note at the top) — not an installation failure. The command still exits 0 and `make test` passes.
+On a fresh clone the health check reports a nonzero number of broken references, all with reason "raw 文件不存在" (raw file missing). This is the expected consequence of the example `raw/` sources not being distributed (see the note at the top) — not an installation failure. The exact count depends on which workspace is active (a bare `k.py health` auto-selects the alphabetically-first example workspace). The command still exits 0 and `make test` passes.
 
 Manual equivalents:
 
@@ -68,9 +68,9 @@ Open [http://localhost:3006](http://localhost:3006).
 
 ## Workspaces
 
-Engine code (`scripts/`, `web/`) is shared across topics; data lives under `workspaces/<name>/` with the same internal layout (`wiki/`, `raw/`, `exports/`, `my_thoughts/`, `.cache/`, `log.md`). Commands default to the `my-research` workspace; pass `--workspace <name>` (CLI) or `KB_WORKSPACE=<name>` (Web) to switch.
+Engine code (`scripts/`, `web/`) is shared across topics; data lives under `workspaces/<name>/` with the same internal layout (`wiki/`, `raw/`, `exports/`, `my_thoughts/`, `.cache/`, `log.md`). When no workspace is specified, the CLI auto-selects one (and prints a hint when several exist); pass `--workspace <name>` (CLI) or `KB_WORKSPACE=<name>` (Web) to choose.
 
-This repository ships **the engine only** — no workspace data is distributed (workspace `wiki/` pages are user-personal data; `raw/` sources are copyright-sensitive). On a fresh clone, no workspace exists yet. Create one with:
+This repository ships **three example workspaces** — `smb-ecommerce`, `rag-evolution`, and `ai-ml-demo` — whose `wiki/` pages are fully browsable on a fresh clone. Only each workspace's `raw/` sources (copyright) and `my_thoughts/` (private notes) are excluded by `.gitignore`. To start your **own** knowledge base, create a new workspace (optional — not a prerequisite for exploring the examples):
 
 ```bash
 python scripts/k.py new-workspace my-research
@@ -86,17 +86,17 @@ All of the following work on a fresh clone (they only read the bundled `wiki/` p
 ```bash
 python scripts/k.py --help
 python scripts/k.py health --json
-python scripts/k.py search "cross-border"
+python scripts/k.py --workspace smb-ecommerce search "cross-border"
 python scripts/k.py list-pages --json
 python scripts/k.py list-conflicts
 python scripts/k.py list-to-update
 
-# Read a wiki page (after you've created a workspace and ingested content): outline, then a full section
-python scripts/k.py outline wiki/sources/<your_page>.md
-python scripts/k.py read-section wiki/sources/<your_page>.md "核心条款"
+# Read a bundled wiki page: outline it first, then read a full section by a heading / ^anchor from that outline
+python scripts/k.py --workspace rag-evolution outline wiki/sources/bge.md
+python scripts/k.py --workspace rag-evolution read-section wiki/sources/bge.md "<heading-or-^anchor-from-the-outline-above>"
 
 # Switch workspace
-python scripts/k.py --workspace my-research search "transformer"
+python scripts/k.py --workspace ai-ml-demo search "transformer"
 ```
 
 ## Convert a Source Document

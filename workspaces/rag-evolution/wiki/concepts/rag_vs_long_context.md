@@ -4,7 +4,7 @@ type: concept
 created_date: 2026-05-26
 last_modified: 2026-05-26
 last_modified_by: LLM
-status: reviewed
+status: draft
 confidence: medium
 source_count: 4
 sources:
