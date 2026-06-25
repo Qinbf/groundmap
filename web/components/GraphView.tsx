@@ -82,6 +82,8 @@ interface SimLink {
   link_type: string;
 }
 
+type ZoomFilterEvent = WheelEvent | MouseEvent | TouchEvent;
+
 const FONT_STACK =
   '-apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Helvetica Neue", system-ui, sans-serif';
 const MONO_STACK = 'ui-monospace, "SF Mono", "JetBrains Mono", "Roboto Mono", Menlo, monospace';
@@ -628,13 +630,14 @@ export function GraphView({ initialFilters = {} }: GraphViewProps) {
 
     const zb = d3zoom<HTMLCanvasElement, unknown>()
       .scaleExtent([0.12, 4])
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .filter((event: any) => {
+      .filter((event: ZoomFilterEvent) => {
         if (event.type === "wheel") return true;
-        if (event.button != null && event.button !== 0) return false;
+        if ("button" in event && event.button != null && event.button !== 0) return false;
         const rect = canvas.getBoundingClientRect();
-        const px = (event.touches ? event.touches[0].clientX : event.clientX) - rect.left;
-        const py = (event.touches ? event.touches[0].clientY : event.clientY) - rect.top;
+        const point = "touches" in event ? event.touches[0] ?? event.changedTouches[0] : event;
+        if (!point) return true;
+        const px = point.clientX - rect.left;
+        const py = point.clientY - rect.top;
         return !pickNode(px, py);
       })
       .on("zoom", (event) => {
