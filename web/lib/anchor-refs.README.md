@@ -66,7 +66,7 @@ return (
 );
 ```
 
-### MiniMarkdown（hover preview / BlocksTable / learn 模块）
+### MiniMarkdown（hover preview / BlocksTable）
 
 ```tsx
 // 不 build registry，不包 Provider，不渲染 References —— BARE 即可

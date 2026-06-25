@@ -23,11 +23,7 @@ export const TRANSLATIONS = {
     "nav.console": "查询控制台",
     "nav.aria.breadcrumb": "面包屑导航",
 
-
     // ── 推理图（与查询控制台一致的 FlowGraph）讲解 ──
-
-
-
 
     "flow.empty": "(空)",
     "flow.truncated": "…(已截断)",
@@ -288,38 +284,6 @@ export const TRANSLATIONS = {
     "action.error.read_failed": "读取失败",
     "action.error.generic": "操作失败",
 
-    // ========== /learn 教学演示页 ==========
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // ========== /graph 图谱页 ==========
     "graph.title": "知识图谱",
     "graph.subtitle": "wiki 页面之间的链接结构。节点按类型染色，边按关系类型染色——把语义化的 [[link|RELATION]] 关系标到图上一眼可见。",
@@ -364,9 +328,6 @@ export const TRANSLATIONS = {
     "nav.console": "Console",
 
     // ── Reasoning graph (same FlowGraph as the query console) ──
-
-
-
 
     "flow.empty": "(empty)",
     "flow.truncated": "…(truncated)",
@@ -627,38 +588,6 @@ export const TRANSLATIONS = {
     "action.error.write_failed": "Write failed",
     "action.error.read_failed": "Read failed",
     "action.error.generic": "Operation failed",
-
-    // ========== /learn teaching demo page ==========
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     // ========== /graph page ==========
     "graph.title": "Knowledge Graph",

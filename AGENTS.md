@@ -57,17 +57,17 @@ groundmap/                   # 引擎根（通用代码 + 规范）
 ├── scripts/                 # 自动化脚本（k.py、convert.py）——通用
 ├── web/                     # Web 管理台（Next.js）——通用
 ├── .claude/skills/          # Claude Code 技能定义——通用
-├── workspaces/              # 多主题工作区（可切换）
-│   ├── my-research/         # ← 用户创建的示例 workspace
-│   │   ├── wiki/            # agent 维护的 Wiki（可读写）
-│   │   ├── raw/             # 原始资料（agent 不可改原始文件）
+├── workspaces/              # 多主题工作区（可切换）；本仓自带 3 个示例库
+│   ├── smb-ecommerce/       # ← 示例：跨境电商
+│   │   ├── wiki/            # agent 维护的 Wiki（可读写，随仓分发）
+│   │   ├── raw/             # 原始资料（agent 不可改；版权原因不随仓分发，仅留 .gitkeep）
 │   │   ├── exports/         # 输出物归档
-│   │   ├── my_thoughts/     # 人类专属区（agent 只读）
+│   │   ├── my_thoughts/     # 人类专属区（agent 只读；不随仓分发，仅留 .gitkeep）
 │   │   ├── .cache/          # SQLite 索引（gitignored，可重建）
 │   │   └── log.md           # 操作日志
-│   ├── research-topic-2/         # ← 第二个 workspace 示例（用户自己创建）
+│   ├── rag-evolution/       # ← 示例：RAG 演化史 (2023-2025)
 │   │   └── ...
-│   └── research-topic-3/         # ← 第三个 workspace 示例（用户自己创建）
+│   └── ai-ml-demo/          # ← 示例：AI/ML（v0 归档库，多数页 status: deprecated）
 │       └── ...
 ├── wiki/                    # 引擎级 wiki（仅 _templates）
 ├── tools/                   # 独立子工具，不属于 KB 核心
@@ -84,7 +84,7 @@ groundmap/                   # 引擎根（通用代码 + 规范）
 | 仓库 | 角色 | 数据 | 分支 |
 |---|---|---|---|
 | `AI知识库/`（本仓） | **开发版** | 含实际 wiki / raw / exports 数据 | `rag-evolution-ip-standard` 等 |
-| `groundmap-release/` | **发布版** | `workspaces/` 为空，仅引擎 + 已审的发布准备改动 | `main` |
+| `groundmap-release/` | **发布版** | 引擎 + 3 个精选示例 demo 库（仅 `wiki/` 随仓；`raw/`、`my_thoughts/` 不分发）+ 已审的发布准备改动 | `main` |
 
 **哪些修改必须双仓同步**（任一改完都需在另一仓做对应改动，否则下次 sync 漂移）：
 
@@ -97,7 +97,7 @@ groundmap/                   # 引擎根（通用代码 + 规范）
 
 **哪些修改不要镜像到 release**：
 
-- 实际的 `workspaces/<name>/wiki/**`、`raw/**`、`exports/**`——只在 dev 维护（release 的 `workspaces/` 应保持空）。
+- dev 里**实际在用的**工作数据（`workspaces/<name>/raw/**`、私人 `my_thoughts/**`、`exports/**`）——不镜像到 release。release 自带的是另一套**精选 demo 库**：仅 `wiki/` 随仓分发，`raw/`、`my_thoughts/` 不分发。
 - dev 专属的实验性 lint / 临时脚本。
 
 **不变量清单**（任一变动都视作"破坏不变量"、必须同时同步）：
@@ -105,7 +105,7 @@ groundmap/                   # 引擎根（通用代码 + 规范）
 - `RELATION_TYPES` 白名单 7 类（k.py ↔ web/lib/markdown.ts）
 - `WIKILINK_RE` 正则（k.py ↔ web/lib/markdown.ts）
 - `TestMirrorSync` 的归一化规则（CLAUDE.md ↔ AGENTS.md ↔ `.claude/skills ↔ .agents/skills`）
-- 默认 workspace 名（dev `smb-ecommerce`，release `my-research`——**故意不同**，反映发布清理意图）
+- 默认 workspace 解析（dev 默认 `smb-ecommerce`；release 不设固定默认——未指定时 CLI 自动选用存在的第一个 workspace，**故意不同**，反映发布清理意图）
 
 **`TestMirrorSync` 守护的镜像范围**（仅在单仓内）：
 
@@ -136,31 +136,31 @@ groundmap/                   # 引擎根（通用代码 + 规范）
 ### k.py CLI
 
 ```bash
-# 默认 workspace（my-research）
+# 不指定 workspace：自动选用存在的第一个（库多时会打印提示）
 python scripts/k.py health --json
 
 # 指定 workspace
-python scripts/k.py --workspace my-research health --json
-python scripts/k.py --workspace my-research search "transformer"
+python scripts/k.py --workspace rag-evolution health --json
+python scripts/k.py --workspace ai-ml-demo search "transformer"
 ```
 
 ### Web 管理台
 
 ```bash
-# 默认 workspace（my-research）
+# 不指定：自动选用存在的第一个 workspace
 cd web && npm run dev
 
-# 指定 workspace
-cd web && KB_WORKSPACE=my-research npm run dev
-cd web && KB_WORKSPACE=my-research npm run dev
+# 指定初始 workspace
+cd web && KB_WORKSPACE=rag-evolution npm run dev
+cd web && KB_WORKSPACE=ai-ml-demo npm run dev
 ```
 
-> `KB_WORKSPACE` 设的是 Web 启动时的**初始/默认** workspace；启动后顶栏有 **workspace 切换器**（`WorkspaceSwitcher`，写 cookie `kb_workspace` + reload），可在界面直接切库、**无需重启**（仅当 >1 个 workspace 时显示）。cookie 值会校验为真实存在的 workspace（`resolveWorkspace()`），防穿越/指向不存在的库。解析优先级：cookie `kb_workspace` > `KB_WORKSPACE` env > 默认 `my-research`，`k.py` 子进程调用同口径。
+> `KB_WORKSPACE` 设的是 Web 启动时的**初始/默认** workspace；启动后顶栏有 **workspace 切换器**（`WorkspaceSwitcher`，写 cookie `kb_workspace` + reload），可在界面直接切库、**无需重启**（仅当 >1 个 workspace 时显示）。cookie 值会校验为真实存在的 workspace（`resolveWorkspace()`），防穿越/指向不存在的库。解析优先级：cookie `kb_workspace` > `KB_WORKSPACE` env > 自动选用存在的第一个 workspace，`k.py` 子进程调用同口径。
 
 ### 设计原则
 
 - 所有 workspace 共享同一个 Git repo（引擎代码 + 数据一起版本控制）
-- 不指定 workspace 时默认使用 `my-research`（向后兼容）
+- 不指定 workspace 时 CLI 自动选用存在的第一个 workspace（库多时打印提示）
 - 每个 workspace 内部结构相同（wiki/、raw/、exports/、my_thoughts/、.cache/、log.md）
 - `wiki/_templates/` 保留在引擎根，所有 workspace 共用
 
