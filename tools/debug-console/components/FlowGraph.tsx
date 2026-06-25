@@ -6,10 +6,11 @@
  *   - 点任意节点 → 透传到 page-level，由右侧 PreviewPanel 渲染节点详情
  *   - 流式生成中：顶部胶囊条 "🤔 AI 思考中"；最新节点静态 cyan 高亮环
  *   - 流式期间推理图保持稳定：连线保留蚂蚁线流动但不闪烁/不卡顿（结构签名 memo + edges memo）、
- *     节点不呼吸/不闪、不随增量重新取景
+ *     节点不呼吸/不闪；每出现一张新卡片自动聚焦取景到全景（fitView），但不逐帧重排
+ *     （nodes.length 由结构签名把关，仅新卡片时变）
  *   - 不再有内嵌底部详情、modal、悬浮 panel —— 统一走 page-level 右侧栏
  */
-import { useMemo, useEffect, useRef } from "react";
+import { useMemo, useEffect } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -104,25 +105,15 @@ function FlowGraphInner({ message, userQuery, onOpenRef, onOpenNode, streaming }
 
   const rf = useReactFlow();
 
-  // 自动取景（fitView）：流式期间不要每加一个节点就平移/缩放（那正是「一直晃」的来源）。
-  // 仅在「首次出现内容」与「流式刚结束」时取景一次；流式进行中保持画面不动，用户可自由平移。
-  const prevCountRef = useRef(0);
-  const prevStreamingRef = useRef(streaming);
+  // 自动聚焦（fitView）：每当出现新卡片（nodes.length 变化）就平滑取景到全景，
+  // 让新卡片入画、整张图整体可见。这不会像以前那样「一直晃」——图已由结构签名 memo 把关，
+  // nodes.length 只在「真有新卡片 / 结构变化」时才变（逐字流式增量不触发），所以是
+  // 「每张新卡片聚焦一次」而非每帧重排。streaming 变化（如刚结束补齐答案卡）也触发一次，
+  // 保证最终把全景框好。
   useEffect(() => {
-    const prevCount = prevCountRef.current;
-    const wasStreaming = prevStreamingRef.current;
-    prevCountRef.current = nodes.length;
-    prevStreamingRef.current = streaming;
     if (nodes.length === 0) return;
-
-    const firstContent = prevCount === 0;
-    const justFinished = wasStreaming && !streaming;
-    // 流式进行中、且既非首次出现内容也非刚结束 → 不重新取景，画面保持稳定
-    if (streaming && !firstContent && !justFinished) return;
-
     const id = setTimeout(() => {
-      // 首次出现内容（流式中）用瞬时取景，避免滑动动画；结束/静止时用平滑取景
-      rf.fitView({ padding: 0.2, duration: firstContent && streaming ? 0 : 400 });
+      rf.fitView({ padding: 0.2, duration: 400 });
     }, 80);
     return () => clearTimeout(id);
   }, [nodes.length, streaming, rf]);
