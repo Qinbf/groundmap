@@ -1,0 +1,445 @@
+
+<div class="question-banner">
+  <span class="q-label">Q1 · Paradigm choice + a real disagreement</span>
+  <p class="q-text">Should we adopt Graph RAG? Is community detection required?</p>
+  <div class="q-meta">Query shape: architecture decision (adopt or not + necessity) · the user signals they're building a RAG system · expected granularity: side-by-side comparison of architectures, and real disagreement — not a single yes/no verdict</div>
+</div>
+
+<div class="graph-section">
+  <h3>Agent page-traversal graph (real path)</h3>
+  <svg class="graph-svg" viewBox="0 0 1040 180" xmlns="http://www.w3.org/2000/svg">
+    <!-- nodes -->
+    <g font-family="-apple-system" font-size="11">
+      <!-- start -->
+      <circle cx="60" cy="90" r="22" fill="#fff" stroke="#a3a3a3" stroke-width="2"/>
+      <text x="60" y="94" text-anchor="middle" fill="#6b7280" font-weight="600">USER</text>
+      <!-- search -->
+      <circle cx="200" cy="90" r="26" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+      <text x="200" y="86" text-anchor="middle" fill="#1e40af" font-weight="700">SEARCH</text>
+      <text x="200" y="100" text-anchor="middle" fill="#1e40af" font-size="9">BM25 · 20 hits</text>
+      <!-- concept -->
+      <circle cx="380" cy="60" r="32" fill="#dcfce7" stroke="#15803d" stroke-width="2.5"/>
+      <text x="380" y="55" text-anchor="middle" fill="#15803d" font-weight="700">concept</text>
+      <text x="380" y="68" text-anchor="middle" fill="#15803d" font-size="9">graph_rag</text>
+      <text x="380" y="78" text-anchor="middle" fill="#15803d" font-size="9">graph-structured RAG</text>
+      <!-- outlinks -->
+      <circle cx="560" cy="90" r="24" fill="#f0fdfa" stroke="#0d9488" stroke-width="2"/>
+      <text x="560" y="86" text-anchor="middle" fill="#115e59" font-weight="700">LINK</text>
+      <text x="560" y="100" text-anchor="middle" fill="#115e59" font-size="9">22 outlinks</text>
+      <!-- comparison -->
+      <circle cx="740" cy="60" r="32" fill="#ffe4e6" stroke="#be123c" stroke-width="2.5"/>
+      <text x="740" y="55" text-anchor="middle" fill="#be123c" font-weight="700">compare</text>
+      <text x="740" y="68" text-anchor="middle" fill="#be123c" font-size="9">three_graph_rag</text>
+      <text x="740" y="78" text-anchor="middle" fill="#be123c" font-size="9">_families</text>
+      <!-- answer -->
+      <circle cx="940" cy="90" r="26" fill="#fef3c7" stroke="#b45309" stroke-width="2.5"/>
+      <text x="940" y="86" text-anchor="middle" fill="#92400e" font-weight="700">ANSWER</text>
+      <text x="940" y="100" text-anchor="middle" fill="#92400e" font-size="9">with refs · conflict</text>
+      <!-- not read sources -->
+      <g opacity="0.4">
+        <circle cx="380" cy="145" r="14" fill="#ede9fe" stroke="#6d28d9" stroke-width="1"/>
+        <text x="380" y="149" text-anchor="middle" fill="#6d28d9" font-size="9">source × 6</text>
+        <text x="380" y="172" text-anchor="middle" fill="#a78bfa" font-size="9">synthesized by concept · skipped</text>
+      </g>
+    </g>
+    <!-- arrows -->
+    <defs>
+      <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6" fill="#6b7280"/>
+      </marker>
+    </defs>
+    <g stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#ar)">
+      <line x1="82" y1="90" x2="172" y2="90"/>
+      <line x1="226" y1="90" x2="348" y2="65"/>
+      <line x1="412" y1="60" x2="538" y2="84"/>
+      <line x1="582" y1="84" x2="708" y2="62"/>
+      <line x1="772" y1="65" x2="912" y2="86"/>
+    </g>
+    <!-- step numbers -->
+    <g font-family="-apple-system" font-size="9" fill="#dc2626" font-weight="700">
+      <text x="125" y="83">①</text>
+      <text x="285" y="64">③</text>
+      <text x="475" y="80">⑤</text>
+      <text x="635" y="62">⑧</text>
+      <text x="855" y="86">⑩</text>
+    </g>
+  </svg>
+  <div class="graph-legend">
+    <span><span class="dot" style="background:#15803d"></span>concept · aggregation layer</span>
+    <span><span class="dot" style="background:#be123c"></span>analysis / compare · synthesis layer</span>
+    <span><span class="dot" style="background:#6d28d9"></span>source · base layer</span>
+    <span><span class="dot" style="background:#1e40af"></span>entity</span>
+    <span><span class="dot" style="background:#d97706"></span>index · MOC</span>
+  </div>
+</div>
+
+<div class="workflow">
+
+  <!-- Step 1 -->
+  <div class="step" data-type="intent">
+    <div class="step-header">
+      <span class="step-num">01</span>
+      <span class="step-badge">INTENT</span>
+      <span class="step-title">Parse the user's intent</span>
+    </div>
+    <div class="step-body">
+      <div class="extract-box">
+        <span class="label">Identified query features</span>
+        <ul>
+          <li>Entities: <strong>Graph RAG</strong> / <strong>community detection</strong> (paradigm name + technical term)</li>
+          <li>Sub-question 1: architecture choice — "should we adopt it"</li>
+          <li>Sub-question 2: necessity — "is community detection required"</li>
+          <li>User role: <em>"should we adopt it"</em> = someone building a RAG system and facing a design call</li>
+          <li>Expected granularity: architectural comparison + real disagreement, not a single "good / bad" verdict</li>
+        </ul>
+      </div>
+      <div class="thinking">This question has a "right-answer trap" — the user doesn't want a wishy-washy "is Graph RAG good?" summary, they want the real technical disagreement. A good answer should <strong>expose the conflict</strong> instead of averaging the opposing views.</div>
+    </div>
+  </div>
+
+  <!-- Step 2 VIEW (hard prerequisite for STRATEGY) -->
+  <div class="step" data-type="view">
+    <div class="step-header">
+      <span class="step-num">02</span>
+      <span class="step-badge">VIEW</span>
+      <span class="step-title">Hard-required read of <code>## 领域目录</code> (domain panorama)</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">Even when the query is distinctive and a BM25 one-shot seems obvious, <strong>first</strong> pull the <code>## 领域目录</code> section of <code>wiki/root_index.md</code> — this 8-row table is a structured catalog that BM25 literal recall cannot reach (search is keyword matching; the catalog is a classification index). This is a v0.6 hard prerequisite: it prevents drilling too deep into one domain and missing adjacent entries.</div>
+      <div>
+        <span class="label">Tool call</span>
+        <pre class="tool"><span class="k">python</span> scripts/k.py read-section <span class="s">wiki/root_index.md</span> <span class="s">"## 领域目录"</span></pre>
+      </div>
+      <div>
+        <span class="label">Returns (excerpt) — 8-row structured domain catalog</span>
+        <table class="response-table">
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/rag_evolution_index.md</td><td>110 pages · overall timeline</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/retrieval_embedding_index.md</td><td>27 pages · retrieval basics &amp; embeddings</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/rag_methods_index.md</td><td>22 pages · RAG method evolution</td></tr>
+          <tr class="picked"><td class="type index">index</td><td class="path">wiki/indexes/graph_rag_index.md</td><td>13 pages · ★ graph-structured RAG</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/evaluation_index.md</td><td>13 pages · evaluation &amp; benchmarks</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/agentic_rl_index.md</td><td>12 pages · agentic &amp; RL</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/long_context_index.md</td><td>8 pages · LC vs RAG</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/surveys_index.md</td><td>3 pages · surveys &amp; positions</td></tr>
+        </table>
+      </div>
+      <div class="thinking">Two candidates surface: <code>graph_rag_index</code> (13 pages · dedicated field) and <code>rag_evolution_index</code> (110 pages · overall timeline, also covers the GraphRAG node). Defer the decision to the next STRATEGY step.</div>
+    </div>
+  </div>
+
+  <!-- Step 3 STRATEGY (decide the path after the panorama in step 2) -->
+  <div class="step" data-type="strategy">
+    <div class="step-header">
+      <span class="step-num">03</span>
+      <span class="step-badge">STRATEGY</span>
+      <span class="step-title">Decide the query path</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">From the panorama above: 'graph-structured RAG' clearly lives in <code>graph_rag_index</code> (13 pages · dedicated field), but <code>rag_evolution_index</code> (110 pages · overall timeline) also covers the GraphRAG node.<br/>Keyword distinctiveness: 'graph rag' and 'community detection' are both highly distinctive terms, so BM25 should one-shot — route (B) direct search is faster, <strong>and</strong> the panorama is the context so we don't miss adjacent entries.</div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" data-type="search">
+    <div class="step-header">
+      <span class="step-num">04</span>
+      <span class="step-badge">SEARCH</span>
+      <span class="step-title">BM25 full-text search</span>
+    </div>
+    <div class="step-body">
+      <div>
+        <span class="label">Tool call</span>
+        <pre class="tool"><span class="k">python</span> scripts/k.py search <span class="s">"graph rag community detection"</span> --json</pre>
+      </div>
+      <div>
+        <span class="label">Returns (real output, top 6 / 20 hits total)</span>
+        <table class="response-table">
+          <tr><td class="score">200</td><td class="type index">index</td><td class="path">wiki/indexes/rag_evolution_index.md</td></tr>
+          <tr class="picked"><td class="score">166</td><td class="type concept">concept</td><td class="path">wiki/concepts/graph_rag.md</td></tr>
+          <tr><td class="score">141</td><td class="type analysis">analysis</td><td class="path">wiki/analyses/kb_vs_human_survey_coverage.md</td></tr>
+          <tr><td class="score">124</td><td class="type analysis">analysis</td><td class="path">wiki/analyses/rag_evolution_timeline_2023_2025.md</td></tr>
+          <tr><td class="score">122</td><td class="type analysis">comparison</td><td class="path">wiki/analyses/three_graph_rag_families.md</td></tr>
+          <tr><td class="score">121</td><td class="type source_summary">source_summary</td><td class="path">wiki/sources/lightrag.md</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" data-type="eval">
+    <div class="step-header">
+      <span class="step-num">05</span>
+      <span class="step-badge">EVAL</span>
+      <span class="step-title">Evaluate hits — choose by type, not raw score</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">The top BM25 hit is <code>rag_evolution_index</code> (200), but <strong>high score ≠ read-it-first</strong> — index is a MOC / navigation layer and carries no claims.<br/>The next is <code>concept/graph_rag</code> (166) — a concept is the 'aggregation layer', already synthesizing 6 underlying sources (GraphRAG / LightRAG / HippoRAG 2 / HippoRAG 1 / RAPTOR / KAG) into an anchored summary.<br/>Strategy: <strong>type priority = concept &gt; analysis/comparison &gt; source &gt; index(navigation)</strong>. Start from <code>wiki/concepts/graph_rag</code>.</div>
+    </div>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" data-type="read">
+    <div class="step-header">
+      <span class="step-num">06</span>
+      <span class="step-badge">READ</span>
+      <span class="step-title">Read the concept page (full body)</span>
+    </div>
+    <div class="step-body">
+      <div>
+        <span class="label">Tool call</span>
+        <pre class="tool"><span class="k">read_page</span>(<span class="s">"wiki/concepts/graph_rag"</span>)</pre>
+      </div>
+      <div>
+        <span class="label">Frontmatter summary</span>
+        <pre class="frontmatter"><span class="key">type:</span> <span class="val">concept</span>
+<span class="key">status:</span> <span class="val">draft</span>          <span class="c"># LLM-written, not human-reviewed (status convention)</span>
+<span class="key">confidence:</span> <span class="val green">high</span>
+<span class="key">source_count:</span> <span class="val">6</span>          <span class="c"># ← key signal: 6 underlying sources already synthesized</span>
+<span class="key">sources:</span>
+  - <span class="val">[[wiki/sources/graphrag]]</span>
+  - <span class="val">[[wiki/sources/lightrag]]</span>
+  - <span class="val">[[wiki/sources/hipporag2]]</span>
+  - <span class="val">[[wiki/sources/hipporag1]] · [[wiki/sources/raptor]] · [[wiki/sources/kag]]</span></pre>
+      </div>
+      <div>
+        <span class="label">Page skeleton (7 H2 sections + 2 conflict blocks)</span>
+        <pre class="frontmatter"><span class="key">## 核心 vs vector RAG 的差异</span>   <span class="c"># ^h-2-1-997cb7</span>
+<span class="key">## GraphRAG 索引流程</span>
+<span class="key">## GraphRAG Query 流程</span>
+<span class="key">## 与其他 RAG 范式的关系</span>
+<span class="key">## 经验结果摘要</span>
+<span class="key">## 三派 Graph RAG 对照</span>
+<span class="key">## 关联页面</span>
+<span class="c"># Body contains 2 &gt; [!WARNING] conflict blocks (vol.1 / vol.2)</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" data-type="extract">
+    <div class="step-header">
+      <span class="step-num">07</span>
+      <span class="step-badge">EXTRACT</span>
+      <span class="step-title">Extract "core differences + indexing flow" (answer sub-question 1, the benefit side)</span>
+    </div>
+    <div class="step-body">
+      <div class="extract-box">
+        <span class="label">Real content + source anchor</span>
+        <ul>
+          <li>Indexing: GraphRAG uses <strong>knowledge graph + community summaries</strong> (vs vector RAG's flat chunk pool + embedding)</li>
+          <li>Indexing flow in 5 steps: chunk → LLM extract entities/relations/claims → build graph → <strong>Leiden community detection</strong> → hierarchical community summaries</li>
+          <li>Query: Map-Reduce — each community summary emits a partial answer → merge into a global answer</li>
+          <li>Empirically: stronger than vector RAG on comprehensiveness + diversity (GPT-4 evaluator)</li>
+        </ul>
+        <p style="margin-top:8px;font-size:12.5px">Indexing-flow source: <span class="citation">[[wiki/sources/graphrag#^h-2-3-c08b6a]]</span></p>
+      </div>
+      <div class="thinking">The benefit side is clear (strong on global sensemaking). But the user specifically asked "<strong>is community detection required</strong>" — and the concept body carries 2 <code>[!WARNING]</code> blocks, aimed right at that dispute. Keep reading.</div>
+    </div>
+  </div>
+
+  <!-- Step 8 ★ CONFLICT -->
+  <div class="step" data-type="conflict">
+    <div class="step-header">
+      <span class="step-num">08</span>
+      <span class="step-badge">CONFLICT</span>
+      <span class="step-title">★ Hit a knowledge-conflict block (inside the concept body)</span>
+    </div>
+    <div class="step-body">
+      <div class="conflict-warn">
+        <span class="label">⚠️ Knowledge-update conflict — internal Graph-school dispute, vol.1</span>
+        <ul>
+          <li><strong>Old view (GraphRAG, MSR 2024-04)</strong>: Knowledge Graph + Leiden hierarchical community detection + pre-generated community summaries + map-reduce is the right graph-RAG architecture; heavy index-time investment buys query-time efficiency.</li>
+          <li><strong>New evidence (LightRAG, HKU 2024-10)</strong>: (a) <strong>community detection is unnecessary complexity</strong> (paper §3.4 says outright that it significantly lowers retrieval overhead); (b) key-value pairs + dual-level retrieval capture most of the graph benefit without community summaries + traversal; (c) supports <strong>incremental updates</strong> — GraphRAG must redo all community detection + summaries whenever data changes.</li>
+          <li><strong>LLM verdict</strong>: LightRAG's experimental numbers depend on LLM-as-judge and use a different dataset, so direct head-to-head isn't valid; but the two <strong>engineering claims are real</strong> (community detection does add complexity; GraphRAG's lack of incremental updates is a real pain point).</li>
+          <li><strong>Status</strong>: 👁 keep watching (<code>keep_watching</code>) — <code>merge</code> — the two architectures target different use cases, not interchangeable substitutes.</li>
+        </ul>
+        <p style="margin-top:8px;font-size:12.5px">Source: <span class="citation">[[wiki/concepts/graph_rag#^p-8-1775c9]]</span></p>
+      </div>
+      <div class="thinking">This is the key step: the knowledge base did <strong>not</strong> flatten the disagreement into a wishy-washy "community detection is generally useful" — it used <code>[!WARNING]</code> to keep both sides explicit and tagged it <code>keep_watching</code>. So the honest answer to "is community detection required?" is: <strong>there is a real dispute, and it is unresolved</strong>.</div>
+    </div>
+  </div>
+
+  <!-- Step 9 -->
+  <div class="step" data-type="link">
+    <div class="step-header">
+      <span class="step-num">09</span>
+      <span class="step-badge">LINK</span>
+      <span class="step-title">Check outlinks (decide whether to drill into the 6 underlying sources)</span>
+    </div>
+    <div class="step-body">
+      <div>
+        <span class="label">Tool call</span>
+        <pre class="tool"><span class="k">outlinks</span>(<span class="s">"wiki/concepts/graph_rag"</span>)</pre>
+      </div>
+      <div>
+        <span class="label">Real returns — 22 outlinks (grouped)</span>
+        <pre class="frontmatter"><span class="c"># pointing to 6 underlying sources (already synthesized on this page, skippable)</span>
+→ wiki/sources/graphrag.md<span class="key">#^h-2-3-c08b6a</span>
+→ wiki/sources/lightrag.md
+→ wiki/sources/hipporag2.md
+→ wiki/sources/raptor.md
+→ wiki/sources/hipporag1.md
+→ wiki/sources/kag.md
+<span class="c"># pointing to related concepts (lateral comparison)</span>
+→ wiki/concepts/retrieval_augmented_generation.md
+→ wiki/concepts/self_reflective_rag.md
+→ wiki/concepts/corrective_rag.md
+<span class="c"># pointing to indexes / MOCs</span>
+→ wiki/indexes/rag_evolution_index.md</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 10 -->
+  <div class="step" data-type="decide">
+    <div class="step-header">
+      <span class="step-num">10</span>
+      <span class="step-badge">DECIDE</span>
+      <span class="step-title">Read the comparison page (skip reading the 6 sources one by one)</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">Four candidate next-step classes:
+        <br>(a) the 6 underlying sources — <strong>skip</strong> (already synthesized by the concept, and the conflict block has already exposed the key disagreement)
+        <br>(b) related concepts (vanilla RAG / Self-RAG / CRAG) — <strong>defer</strong> (side branches; the user is asking about Graph RAG itself)
+        <br>(c) <code>rag_evolution_index</code> — <strong>no</strong> (navigation layer, no claims)
+        <br>(d) <code>wiki/analyses/three_graph_rag_families</code> — surfaced in the search (122), cross-document synthesis layer — <strong>read</strong> (it should have a "how this dispute resolves" synthesis)
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 11 -->
+  <div class="step" data-type="read">
+    <div class="step-header">
+      <span class="step-num">11</span>
+      <span class="step-badge">READ</span>
+      <span class="step-title">Read the comparison page</span>
+    </div>
+    <div class="step-body">
+      <div>
+        <span class="label">Tool call</span>
+        <pre class="tool"><span class="k">read_page</span>(<span class="s">"wiki/analyses/three_graph_rag_families"</span>)</pre>
+      </div>
+      <div>
+        <span class="label">Frontmatter</span>
+        <pre class="frontmatter"><span class="key">type:</span> <span class="val">comparison</span>      <span class="c"># cross-document comparison, synthesizes multiple sources</span>
+<span class="key">status:</span> <span class="val">draft</span>
+<span class="key">confidence:</span> <span class="val green">high</span>
+<span class="key">source_count:</span> <span class="val">6</span>        <span class="c"># GraphRAG / LightRAG / HippoRAG 2 / HippoRAG 1 / RAPTOR / KAG</span></pre>
+      </div>
+      <div>
+        <span class="label">Page skeleton</span>
+        <pre class="frontmatter"><span class="key">## 背景</span>                          <span class="c"># 2 internal splits within 18 months</span>
+<span class="key">## 分析：三派架构对照</span>
+  <span class="key">### 完整对照表</span>              <span class="c"># ^h-3-1-e98c45 — GraphRAG/LightRAG/HippoRAG2</span>
+  <span class="key">### 两个根本性的方法论分裂</span>  <span class="c"># ^h-3-2-14b498</span>
+<span class="key">## Batch 4 终极升级：6 篇规模</span>
+<span class="key">## 结论</span>                          <span class="c"># ^h-2-3-241385 — ★ synthesis verdict</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 12 -->
+  <div class="step" data-type="extract">
+    <div class="step-header">
+      <span class="step-num">12</span>
+      <span class="step-badge">EXTRACT</span>
+      <span class="step-title">Extract "the two splits + synthesis verdict"</span>
+    </div>
+    <div class="step-body">
+      <div class="extract-box">
+        <span class="label">Two fundamental methodological splits</span>
+        <ul>
+          <li>Split 1: <strong>Is community detection required?</strong> (GraphRAG: yes vs LightRAG: no) — the same conflict from the previous step</li>
+          <li>Split 2: <strong>"expand-corpus" school</strong> (GraphRAG / LightRAG / RAPTOR) vs <strong>"augment-retrieval" school</strong> (HippoRAG 1/2)</li>
+        </ul>
+      </div>
+      <div class="extract-box">
+        <span class="label">Verdict (with anchor)</span>
+        <ul>
+          <li>The real disagreement is <strong>not</strong> about community detection, <strong>but</strong> "expand-corpus school vs augment-retrieval school"</li>
+          <li>The expand-corpus school fits <strong>global sensemaking</strong> (topics / trends / summaries); the augment-retrieval school (HippoRAG) fits <strong>the full task spectrum</strong> and is more robust</li>
+          <li>Prediction: future work goes toward "augment-retrieval + a sensemaking-specific module"</li>
+          <li>Confidence: <strong>medium-high</strong> (numerical claims all rely on LLM-as-judge; a strict head-to-head is still missing)</li>
+        </ul>
+        <p style="margin-top:6px;font-size:12.5px">Source: <span class="citation">[[wiki/analyses/three_graph_rag_families#^p-6-942640]]</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 13 -->
+  <div class="step" data-type="decide">
+    <div class="step-header">
+      <span class="step-num">13</span>
+      <span class="step-badge">DECIDE</span>
+      <span class="step-title">Stop spreading — there is already enough to answer</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">Checklist:
+        <br>· Should we adopt it ✅ (depends on query type: sensemaking → big payoff; simple factoid → may not pay off)
+        <br>· Is community detection required ✅ (a real dispute, unresolved: LightRAG refutes, <code>keep_watching</code>)
+        <br>· Keep reading the 6 underlying sources? — No (duplicate information)
+        <br>· Keep reading the vanilla / Self-RAG / CRAG concepts? — No (side branches)
+        <br>→ Stop spreading. But verify the original once before composing (see next step, VERIFY)
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 14 VERIFY (detail drill-down: verify the precise conflict against the original before reproducing) -->
+  <div class="step" data-type="read">
+    <div class="step-header">
+      <span class="step-num">14</span>
+      <span class="step-badge">VERIFY</span>
+      <span class="step-title">★ Before reproducing the precise conflict · read-block to verify the original</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">The answer is about to reproduce GraphRAG vs LightRAG's verbatim engineering claims and mentions "experimental numbers depend on LLM-as-judge", yet step 6 <code>read_page</code> only returned the concept page's skeleton (anchor list, not the full conflict block). Per the <strong>detail drill-down rule</strong>, before composing it <code>read-block</code>s the conflict anchor <code>^p-8-1775c9</code> to fetch the verbatim original:
+        <br>· check LightRAG §3.4 "markedly reduces retrieval overhead…" wording is exact
+        <br>· confirm the caveat "both engineering claims real, but experimental numbers need caution" was not overstated
+        <br>· flag the bare citation <span class="citation">[[wiki/sources/lightrag]]</span> as too coarse — it should be a block anchor (<code>list-coarse-citations</code> catches it)
+        <br>→ definitional / overview (type-A) questions don't trigger this; here it drills because it reproduces both camps' precise claims and numbers.
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 15 ANSWER -->
+  <div class="step" data-type="answer">
+    <div class="step-header">
+      <span class="step-num">15</span>
+      <span class="step-badge">ANSWER</span>
+      <span class="step-title">Compose a structured answer with anchors</span>
+    </div>
+    <div class="step-body">
+      <div class="answer-panel">
+        <h3>Agent's final reply</h3>
+
+        <h4>Should we adopt Graph RAG?</h4>
+        <p>It depends on your query type — for <strong>global sensemaking / topic summarization</strong> the payoff is large; for <strong>simple factoid / single-hop QA</strong> it may not justify the index-time cost <span class="citation">[[wiki/analyses/three_graph_rag_families#^p-6-942640]]</span>.</p>
+
+        <h4>Is community detection required? (★ a real dispute — no single verdict)</h4>
+        <ul>
+          <li>GraphRAG (MSR): community detection + hierarchical summaries are the core architecture <span class="citation">[[wiki/sources/graphrag#^h-2-3-c08b6a]]</span></li>
+          <li>LightRAG (HKU) <strong>refutes</strong>: community detection is unnecessary complexity; dual-level retrieval captures most of the benefit and supports incremental updates <span class="citation">[[wiki/sources/lightrag]]</span></li>
+          <li>Knowledge-base verdict: the two engineering claims are real (added complexity + GraphRAG's lack of incremental updates), but the experimental numbers depend on LLM-as-judge so be cautious; status <strong>keep_watching</strong> <span class="citation">[[wiki/concepts/graph_rag#^p-8-1775c9]]</span></li>
+        </ul>
+
+        <h4>The higher-level synthesis</h4>
+        <p>The real disagreement is actually "<strong>expand-corpus school vs augment-retrieval school</strong>" — pick by your task spectrum (sensemaking vs full-spectrum QA), not by who's "better" <span class="citation">[[wiki/analyses/three_graph_rag_families#^p-6-942640]]</span>.</p>
+
+        <h4>Related wiki pages (deeper reading)</h4>
+        <p><span class="citation">[[wiki/concepts/graph_rag]]</span> · <span class="citation">[[wiki/analyses/three_graph_rag_families]]</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="rag-compare">
+  <span class="label">⚠️ What classic chunk-RAG would do (argumentative comparison — not measured on this page)</span>
+  <p class="rag-meta">This KB itself does not run chunk-RAG (design principle 1: the knowledge base doesn't call any LLM; principle 4: no embedding recall). What follows is a textbook-style projection of "what would go wrong" — unlike the rest of the page which is real captured trace data, this is argument.</p>
+  <p>1. Slice the GraphRAG / LightRAG / HippoRAG papers into 200–500 token chunks — dozens of fragments</p>
+  <p>2. Embedding-search top-K (usually K=5) — return 5 semantically similar chunks</p>
+  <p>3. Hand them to the LLM to synthesize — it will <strong>average</strong> "GraphRAG says community detection is core" and "LightRAG says it's unnecessary" into a bland "community detection is usually helpful" — <strong>the real architectural disagreement is flattened</strong></p>
+  <p>4. Citation granularity = chunk (with surrounding-context noise) — the user can't trace back to which paper, which paragraph, let alone see a <code>keep_watching</code> "unresolved" status</p>
+  <p>5. Failure mode: <strong>conflict becomes invisible</strong> — the user gets a seemingly neutral, actually distorted answer, and misses the most important judgment: "this is an unresolved dispute — pick by query type"</p>
+</div>
+
+</div>

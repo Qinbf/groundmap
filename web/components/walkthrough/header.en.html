@@ -1,0 +1,32 @@
+<div class="container">
+
+<h1>
+  GroundMap — Query Walkthrough (Real Run, Captured)
+  <span class="sub">Every tool call, returned payload, and anchor citation is taken from a real run of this repo — not a fabricated demo.</span>
+</h1>
+
+<div class="authenticity">
+  <strong>Authenticity guarantee</strong>: every step on this page corresponds to a real tool invocation (<code>k.py search</code> / <code>k.py outlinks</code> / <code>k.py list-conflicts</code> and friends), and the hit scores, anchor IDs, frontmatter, and conflict text are scraped directly from <code>wiki/</code> + <code>raw/</code>. If you open the repo and follow along, the items match one-to-one.
+</div>
+
+<h2>4 core design principles</h2>
+<div class="principle-grid">
+  <div class="principle">
+    <div class="label">No vector recall</div>
+    <div class="body">Retrieval is BM25 full-text + metadata filtering. No vector store, no chunking.</div>
+  </div>
+  <div class="principle">
+    <div class="label">Block-level anchors</div>
+    <div class="body">Every paragraph carries a stable anchor (e.g. <code>^p-12-7d8e9a</code>), so citations land on the exact paragraph.</div>
+  </div>
+  <div class="principle">
+    <div class="label">Conflict is visible</div>
+    <div class="body">Diverging sources are not averaged; they are kept explicit with <code>[!WARNING]</code> blocks.</div>
+  </div>
+  <div class="principle">
+    <div class="label">Three-tier ingest</div>
+    <div class="body">Short docs are read in one go, medium ones split by H1, long ones get a TOC scan plus a per-chapter depth log.</div>
+  </div>
+</div>
+
+<h2>One real example</h2>

@@ -1,0 +1,445 @@
+
+<div class="question-banner">
+  <span class="q-label">Q1 · 范式选型 + 真实分歧</span>
+  <p class="q-text">要不要上 Graph RAG？社区检测（community detection）是必须的吗？</p>
+  <div class="q-meta">查询特征：选型决策（要不要用 + 必要性）· 用户身份暗示 RAG 系统搭建者 · 期望粒度：架构对比 / 暴露真实分歧而非给单一结论</div>
+</div>
+
+<div class="graph-section">
+  <h3>Agent 页面遍历图（真实路径）</h3>
+  <svg class="graph-svg" viewBox="0 0 1040 180" xmlns="http://www.w3.org/2000/svg">
+    <!-- nodes -->
+    <g font-family="-apple-system" font-size="11">
+      <!-- start -->
+      <circle cx="60" cy="90" r="22" fill="#fff" stroke="#a3a3a3" stroke-width="2"/>
+      <text x="60" y="94" text-anchor="middle" fill="#6b7280" font-weight="600">USER</text>
+      <!-- search -->
+      <circle cx="200" cy="90" r="26" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+      <text x="200" y="86" text-anchor="middle" fill="#1e40af" font-weight="700">SEARCH</text>
+      <text x="200" y="100" text-anchor="middle" fill="#1e40af" font-size="9">BM25 · 20 hits</text>
+      <!-- concept -->
+      <circle cx="380" cy="60" r="32" fill="#dcfce7" stroke="#15803d" stroke-width="2.5"/>
+      <text x="380" y="55" text-anchor="middle" fill="#15803d" font-weight="700">concept</text>
+      <text x="380" y="68" text-anchor="middle" fill="#15803d" font-size="9">graph_rag</text>
+      <text x="380" y="78" text-anchor="middle" fill="#15803d" font-size="9">图结构 RAG</text>
+      <!-- outlinks -->
+      <circle cx="560" cy="90" r="24" fill="#f0fdfa" stroke="#0d9488" stroke-width="2"/>
+      <text x="560" y="86" text-anchor="middle" fill="#115e59" font-weight="700">LINK</text>
+      <text x="560" y="100" text-anchor="middle" fill="#115e59" font-size="9">22 outlinks</text>
+      <!-- comparison -->
+      <circle cx="740" cy="60" r="32" fill="#ffe4e6" stroke="#be123c" stroke-width="2.5"/>
+      <text x="740" y="55" text-anchor="middle" fill="#be123c" font-weight="700">compare</text>
+      <text x="740" y="68" text-anchor="middle" fill="#be123c" font-size="9">three_graph_rag</text>
+      <text x="740" y="78" text-anchor="middle" fill="#be123c" font-size="9">_families</text>
+      <!-- answer -->
+      <circle cx="940" cy="90" r="26" fill="#fef3c7" stroke="#b45309" stroke-width="2.5"/>
+      <text x="940" y="86" text-anchor="middle" fill="#92400e" font-weight="700">ANSWER</text>
+      <text x="940" y="100" text-anchor="middle" fill="#92400e" font-size="9">含引用·冲突</text>
+      <!-- not read sources -->
+      <g opacity="0.4">
+        <circle cx="380" cy="145" r="14" fill="#ede9fe" stroke="#6d28d9" stroke-width="1"/>
+        <text x="380" y="149" text-anchor="middle" fill="#6d28d9" font-size="9">source × 6</text>
+        <text x="380" y="172" text-anchor="middle" fill="#a78bfa" font-size="9">已被 concept 综合·跳过</text>
+      </g>
+    </g>
+    <!-- arrows -->
+    <defs>
+      <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6" fill="#6b7280"/>
+      </marker>
+    </defs>
+    <g stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#ar)">
+      <line x1="82" y1="90" x2="172" y2="90"/>
+      <line x1="226" y1="90" x2="348" y2="65"/>
+      <line x1="412" y1="60" x2="538" y2="84"/>
+      <line x1="582" y1="84" x2="708" y2="62"/>
+      <line x1="772" y1="65" x2="912" y2="86"/>
+    </g>
+    <!-- step numbers -->
+    <g font-family="-apple-system" font-size="9" fill="#dc2626" font-weight="700">
+      <text x="125" y="83">①</text>
+      <text x="285" y="64">③</text>
+      <text x="475" y="80">⑤</text>
+      <text x="635" y="62">⑧</text>
+      <text x="855" y="86">⑩</text>
+    </g>
+  </svg>
+  <div class="graph-legend">
+    <span><span class="dot" style="background:#15803d"></span>concept · 聚合层</span>
+    <span><span class="dot" style="background:#be123c"></span>analysis / compare · 综合层</span>
+    <span><span class="dot" style="background:#6d28d9"></span>source · 底层来源</span>
+    <span><span class="dot" style="background:#1e40af"></span>entity · 实体</span>
+    <span><span class="dot" style="background:#d97706"></span>index · 索引/MOC</span>
+  </div>
+</div>
+
+<div class="workflow">
+
+  <!-- Step 1 -->
+  <div class="step" data-type="intent">
+    <div class="step-header">
+      <span class="step-num">01</span>
+      <span class="step-badge">INTENT</span>
+      <span class="step-title">解析用户查询意图</span>
+    </div>
+    <div class="step-body">
+      <div class="extract-box">
+        <span class="label">识别到的查询特征</span>
+        <ul>
+          <li>实体：<strong>Graph RAG</strong> / <strong>community detection</strong>（范式名 + 技术术语）</li>
+          <li>子问题 1：选型 — "要不要上"</li>
+          <li>子问题 2：必要性 — "社区检测是不是必须"</li>
+          <li>用户身份：<em>"要不要上"</em> = RAG 系统搭建者，面临架构选型</li>
+          <li>期望粒度：架构对比 + 真实分歧，而非"好 / 不好"的单结论</li>
+        </ul>
+      </div>
+      <div class="thinking">这是个有"正确答案陷阱"的问题——用户要的不是"Graph RAG 好不好"的中庸结论，而是真实的技术分歧。好的答案应当<strong>暴露冲突</strong>，而不是把对立观点平均掉。</div>
+    </div>
+  </div>
+
+  <!-- Step 2 VIEW (硬必读领域目录 — STRATEGY 的硬前置工序) -->
+  <div class="step" data-type="view">
+    <div class="step-header">
+      <span class="step-num">02</span>
+      <span class="step-badge">VIEW</span>
+      <span class="step-title">硬必读 <code>## 领域目录</code>（领域全景）</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">即使关键词独特性高、准备走 BM25 一击命中，也<strong>先</strong>把 <code>wiki/root_index.md</code> 的 <code>## 领域目录</code> 节取回来——这张 8 行表是结构化目录，BM25 字面召回拿不到（搜索是「关键词匹配」，目录是「分类索引」）。这是 v0.6 的硬前置改动：避免在 1 个领域查得过深、漏掉相邻领域入口。</div>
+      <div>
+        <span class="label">工具调用</span>
+        <pre class="tool"><span class="k">python</span> scripts/k.py read-section <span class="s">wiki/root_index.md</span> <span class="s">"## 领域目录"</span></pre>
+      </div>
+      <div>
+        <span class="label">返回（节选）— 8 行结构化领域目录</span>
+        <table class="response-table">
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/rag_evolution_index.md</td><td>110 页 · 总时间线</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/retrieval_embedding_index.md</td><td>27 页 · 检索基础与嵌入</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/rag_methods_index.md</td><td>22 页 · RAG 方法演进</td></tr>
+          <tr class="picked"><td class="type index">index</td><td class="path">wiki/indexes/graph_rag_index.md</td><td>13 页 · ★ 图结构 RAG</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/evaluation_index.md</td><td>13 页 · 评测·基准</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/agentic_rl_index.md</td><td>12 页 · Agentic·RL</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/long_context_index.md</td><td>8 页 · LC vs RAG</td></tr>
+          <tr><td class="type index">index</td><td class="path">wiki/indexes/surveys_index.md</td><td>3 页 · 综述与立场</td></tr>
+        </table>
+      </div>
+      <div class="thinking">看到两个候选：<code>graph_rag_index</code>（13 页 · 专门领域）和 <code>rag_evolution_index</code>（110 页 · 总时间线、也覆盖 GraphRAG 节点）。决策留到下一步 STRATEGY。</div>
+    </div>
+  </div>
+
+  <!-- Step 3 STRATEGY (基于第 2 步的领域全景做路径决策) -->
+  <div class="step" data-type="strategy">
+    <div class="step-header">
+      <span class="step-num">03</span>
+      <span class="step-badge">STRATEGY</span>
+      <span class="step-title">决定查询路径</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">基于上一步的领域全景：'图结构 RAG' 明确在 <code>graph_rag_index</code>（13 页 · 专门领域），但 <code>rag_evolution_index</code>（110 页 · 总时间线）也覆盖 GraphRAG 节点。<br/>关键词独特性：「graph rag」「community detection」都是高独特性术语，BM25 应一击命中——走 (B) 直接搜索更快，<strong>且</strong>带着领域上下文决策、避免漏掉相邻领域入口。</div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" data-type="search">
+    <div class="step-header">
+      <span class="step-num">04</span>
+      <span class="step-badge">SEARCH</span>
+      <span class="step-title">BM25 全文搜索</span>
+    </div>
+    <div class="step-body">
+      <div>
+        <span class="label">工具调用</span>
+        <pre class="tool"><span class="k">python</span> scripts/k.py search <span class="s">"graph rag community detection"</span> --json</pre>
+      </div>
+      <div>
+        <span class="label">返回（真实输出，top 6 / 共 20 hits）</span>
+        <table class="response-table">
+          <tr><td class="score">200</td><td class="type index">index</td><td class="path">wiki/indexes/rag_evolution_index.md</td></tr>
+          <tr class="picked"><td class="score">166</td><td class="type concept">concept</td><td class="path">wiki/concepts/graph_rag.md</td></tr>
+          <tr><td class="score">141</td><td class="type analysis">analysis</td><td class="path">wiki/analyses/kb_vs_human_survey_coverage.md</td></tr>
+          <tr><td class="score">124</td><td class="type analysis">analysis</td><td class="path">wiki/analyses/rag_evolution_timeline_2023_2025.md</td></tr>
+          <tr><td class="score">122</td><td class="type analysis">comparison</td><td class="path">wiki/analyses/three_graph_rag_families.md</td></tr>
+          <tr><td class="score">121</td><td class="type source_summary">source_summary</td><td class="path">wiki/sources/lightrag.md</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" data-type="eval">
+    <div class="step-header">
+      <span class="step-num">05</span>
+      <span class="step-badge">EVAL</span>
+      <span class="step-title">评估 hits — 按 type 而非纯按分数选</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">BM25 最高分是 <code>rag_evolution_index</code>（200 分），但<strong>分数高 ≠ 应该首读</strong>——index 是 MOC / 导航层，不含论断。<br/>次高是 <code>concept/graph_rag</code>（166 分）——concept 是"聚合层"，已把 6 个底层 source（GraphRAG / LightRAG / HippoRAG 2 / HippoRAG 1 / RAPTOR / KAG）综合成一份带 anchor 引用的摘要。<br/>策略：<strong>type 优先级 = concept &gt; analysis/comparison &gt; source &gt; index(导航)</strong>。从 <code>wiki/concepts/graph_rag</code> 入手。</div>
+    </div>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" data-type="read">
+    <div class="step-header">
+      <span class="step-num">06</span>
+      <span class="step-badge">READ</span>
+      <span class="step-title">读 concept 页（全文）</span>
+    </div>
+    <div class="step-body">
+      <div>
+        <span class="label">工具调用</span>
+        <pre class="tool"><span class="k">read_page</span>(<span class="s">"wiki/concepts/graph_rag"</span>)</pre>
+      </div>
+      <div>
+        <span class="label">Frontmatter 摘要</span>
+        <pre class="frontmatter"><span class="key">type:</span> <span class="val">concept</span>
+<span class="key">status:</span> <span class="val">draft</span>          <span class="c"># LLM 写入，未经人类审阅（status 约定）</span>
+<span class="key">confidence:</span> <span class="val green">high</span>
+<span class="key">source_count:</span> <span class="val">6</span>          <span class="c"># ← 关键信号：已综合 6 个底层 source</span>
+<span class="key">sources:</span>
+  - <span class="val">[[wiki/sources/graphrag]]</span>
+  - <span class="val">[[wiki/sources/lightrag]]</span>
+  - <span class="val">[[wiki/sources/hipporag2]]</span>
+  - <span class="val">[[wiki/sources/hipporag1]] · [[wiki/sources/raptor]] · [[wiki/sources/kag]]</span></pre>
+      </div>
+      <div>
+        <span class="label">页面骨架（7 个 H2 节 + 2 个冲突块）</span>
+        <pre class="frontmatter"><span class="key">## 核心 vs vector RAG 的差异</span>   <span class="c"># ^h-2-1-997cb7</span>
+<span class="key">## GraphRAG 索引流程</span>
+<span class="key">## GraphRAG Query 流程</span>
+<span class="key">## 与其他 RAG 范式的关系</span>
+<span class="key">## 经验结果摘要</span>
+<span class="key">## 三派 Graph RAG 对照</span>
+<span class="key">## 关联页面</span>
+<span class="c"># 正文内含 2 个 &gt; [!WARNING] 冲突块（vol.1 / vol.2）</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" data-type="extract">
+    <div class="step-header">
+      <span class="step-num">07</span>
+      <span class="step-badge">EXTRACT</span>
+      <span class="step-title">提取「核心差异 + 索引流程」（回答子问题 1 的收益侧）</span>
+    </div>
+    <div class="step-body">
+      <div class="extract-box">
+        <span class="label">真实内容 + 出处 anchor</span>
+        <ul>
+          <li>索引：GraphRAG 用 <strong>knowledge graph + community summaries</strong>（vs vector RAG 的扁平 chunk pool + embedding）</li>
+          <li>索引流程 5 步：chunk → LLM 抽取实体/关系/claims → 构图 → <strong>Leiden 社区检测</strong> → 层次社区摘要</li>
+          <li>Query：Map-Reduce —— 每个社区摘要出 partial answer → 合并成 global answer</li>
+          <li>经验：在 comprehensiveness + diversity 上强于 vector RAG（GPT-4 evaluator）</li>
+        </ul>
+        <p style="margin-top:8px;font-size:12.5px">索引流程出处：<span class="citation">[[wiki/sources/graphrag#^h-2-3-c08b6a]]</span></p>
+      </div>
+      <div class="thinking">收益侧清楚了（global sensemaking 强）。但用户特别问"<strong>社区检测是不是必须</strong>"——而 concept 正文里挂着 2 个 <code>[!WARNING]</code> 块，正是冲着这个争议点。继续看。</div>
+    </div>
+  </div>
+
+  <!-- Step 8 ★ CONFLICT -->
+  <div class="step" data-type="conflict">
+    <div class="step-header">
+      <span class="step-num">08</span>
+      <span class="step-badge">CONFLICT</span>
+      <span class="step-title">★ 撞见知识冲突标注（concept 正文内）</span>
+    </div>
+    <div class="step-body">
+      <div class="conflict-warn">
+        <span class="label">⚠️ 知识更新冲突 — Graph 派内部之争 vol.1</span>
+        <ul>
+          <li><strong>旧观点（GraphRAG, MSR 2024-04）</strong>：Knowledge Graph + Leiden 层次社区检测 + 预生成 community summaries + map-reduce 是 graph-RAG 的正确架构；index time 重投入换 query time 高效。</li>
+          <li><strong>新证据（LightRAG, HKU 2024-10）</strong>：(a) <strong>社区检测是不必要的复杂度</strong>（论文 §3.4 直言显著降低检索开销）；(b) key-value pair + dual-level retrieval 可拿到大部分 graph 收益、不需社区摘要 + traversal；(c) 支持<strong>增量更新</strong>，GraphRAG 数据一变就得重跑全部社区检测 + 摘要。</li>
+          <li><strong>LLM 判断</strong>：LightRAG 实验数字依赖 LLM-as-judge、数据集不同不可直接比，需谨慎；但两个<strong>工程论断是真实的</strong>（社区检测确增复杂度；GraphRAG 不支持增量更新是真实痛点）。</li>
+          <li><strong>状态</strong>：👁 持续观察（keep_watching）— <code>merge</code> —— 两种架构对应不同 use case，而非互相替代。</li>
+        </ul>
+        <p style="margin-top:8px;font-size:12.5px">出处：<span class="citation">[[wiki/concepts/graph_rag#^p-8-1775c9]]</span></p>
+      </div>
+      <div class="thinking">这是关键一步：知识库<strong>没有把分歧抹平</strong>成"社区检测一般有用"这种中庸结论，而是用 <code>[!WARNING]</code> 显式保留对立双方 + 标 <code>keep_watching</code>。所以"社区检测必须吗"的诚实答案是：<strong>有真实争议、且未决</strong>。</div>
+    </div>
+  </div>
+
+  <!-- Step 9 -->
+  <div class="step" data-type="link">
+    <div class="step-header">
+      <span class="step-num">09</span>
+      <span class="step-badge">LINK</span>
+      <span class="step-title">看出向链接（决定要不要下钻 6 个底层 source）</span>
+    </div>
+    <div class="step-body">
+      <div>
+        <span class="label">工具调用</span>
+        <pre class="tool"><span class="k">outlinks</span>(<span class="s">"wiki/concepts/graph_rag"</span>)</pre>
+      </div>
+      <div>
+        <span class="label">真实返回 — 22 条出向链接（分组）</span>
+        <pre class="frontmatter"><span class="c"># 指向 6 个底层 source（已被本页综合，可不读）</span>
+→ wiki/sources/graphrag.md<span class="key">#^h-2-3-c08b6a</span>
+→ wiki/sources/lightrag.md
+→ wiki/sources/hipporag2.md
+→ wiki/sources/raptor.md
+→ wiki/sources/hipporag1.md
+→ wiki/sources/kag.md
+<span class="c"># 指向相关概念（横向对照）</span>
+→ wiki/concepts/retrieval_augmented_generation.md
+→ wiki/concepts/self_reflective_rag.md
+→ wiki/concepts/corrective_rag.md
+<span class="c"># 指向索引/MOC</span>
+→ wiki/indexes/rag_evolution_index.md</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 10 -->
+  <div class="step" data-type="decide">
+    <div class="step-header">
+      <span class="step-num">10</span>
+      <span class="step-badge">DECIDE</span>
+      <span class="step-title">决定读 comparison 页（不逐个读 6 个 source）</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">面前有 4 类候选下一步：
+        <br>(a) 6 个底层 source — <strong>跳过</strong>（已被 concept 综合，且冲突块已暴露关键分歧）
+        <br>(b) 相关 concept（vanilla RAG / Self-RAG / CRAG）— <strong>暂缓</strong>（是支线，用户问的是 Graph RAG 本身）
+        <br>(c) <code>rag_evolution_index</code> — <strong>否</strong>（导航层，不含论断）
+        <br>(d) <code>wiki/analyses/three_graph_rag_families</code> —— 搜索命中里（122 分），跨文档对照层 —— <strong>读</strong>（应有"这场争议怎么收"的综合结论）
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 11 -->
+  <div class="step" data-type="read">
+    <div class="step-header">
+      <span class="step-num">11</span>
+      <span class="step-badge">READ</span>
+      <span class="step-title">读 comparison 页</span>
+    </div>
+    <div class="step-body">
+      <div>
+        <span class="label">工具调用</span>
+        <pre class="tool"><span class="k">read_page</span>(<span class="s">"wiki/analyses/three_graph_rag_families"</span>)</pre>
+      </div>
+      <div>
+        <span class="label">Frontmatter</span>
+        <pre class="frontmatter"><span class="key">type:</span> <span class="val">comparison</span>      <span class="c"># 跨文档对照页，综合多个来源</span>
+<span class="key">status:</span> <span class="val">draft</span>
+<span class="key">confidence:</span> <span class="val green">high</span>
+<span class="key">source_count:</span> <span class="val">6</span>        <span class="c"># GraphRAG / LightRAG / HippoRAG 2 / HippoRAG 1 / RAPTOR / KAG</span></pre>
+      </div>
+      <div>
+        <span class="label">页面骨架</span>
+        <pre class="frontmatter"><span class="key">## 背景</span>                          <span class="c"># 18 个月内 2 次内部分裂</span>
+<span class="key">## 分析：三派架构对照</span>
+  <span class="key">### 完整对照表</span>              <span class="c"># ^h-3-1-e98c45 — GraphRAG/LightRAG/HippoRAG2</span>
+  <span class="key">### 两个根本性的方法论分裂</span>  <span class="c"># ^h-3-2-14b498</span>
+<span class="key">## Batch 4 终极升级：6 篇规模</span>
+<span class="key">## 结论</span>                          <span class="c"># ^h-2-3-241385 — ★ 综合判断</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 12 -->
+  <div class="step" data-type="extract">
+    <div class="step-header">
+      <span class="step-num">12</span>
+      <span class="step-badge">EXTRACT</span>
+      <span class="step-title">抽取「两个分裂 + 综合结论」</span>
+    </div>
+    <div class="step-body">
+      <div class="extract-box">
+        <span class="label">两个根本性的方法论分裂</span>
+        <ul>
+          <li>分裂 1：<strong>community detection 必要吗？</strong>（GraphRAG 必要 vs LightRAG 不必要）—— 即上一步那个冲突</li>
+          <li>分裂 2：<strong>"扩充 corpus 派"</strong>（GraphRAG / LightRAG / RAPTOR）vs <strong>"辅助 retrieval 派"</strong>（HippoRAG 1/2）</li>
+        </ul>
+      </div>
+      <div class="extract-box">
+        <span class="label">结论（带 anchor）</span>
+        <ul>
+          <li>真正分歧<strong>不是</strong> community detection 之争，<strong>而是</strong>"扩充 corpus 派 vs 辅助 retrieval 派"</li>
+          <li>扩充 corpus 派适合 <strong>global sensemaking</strong>（主题/趋势/总结类）；辅助 retrieval 派（HippoRAG）适合<strong>全谱任务</strong>、更稳</li>
+          <li>预言：未来走"辅助 retrieval 派 + sensemaking 专用模块"</li>
+          <li>置信度：<strong>中-高</strong>（数字声明都依赖 LLM-as-judge，严格 head-to-head 仍缺）</li>
+        </ul>
+        <p style="margin-top:6px;font-size:12.5px">出处：<span class="citation">[[wiki/analyses/three_graph_rag_families#^p-6-942640]]</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 13 -->
+  <div class="step" data-type="decide">
+    <div class="step-header">
+      <span class="step-num">13</span>
+      <span class="step-badge">DECIDE</span>
+      <span class="step-title">停止扩散 — 信息已经够回答</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">检查清单：
+        <br>· 要不要上 ✅（取决 query 类型：sensemaking → 收益大；简单 factoid → 未必值回成本）
+        <br>· 社区检测必须吗 ✅（有真实争议且未决：LightRAG 反驳，<code>keep_watching</code>）
+        <br>· 继续读 6 个底层 source？— 否（重复信息）
+        <br>· 继续读 vanilla / Self-RAG / CRAG concept？— 否（支线）
+        <br>→ 停止扩散。但组装答案前要回原文核验一次（见下一步 VERIFY）
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 14 VERIFY（细节下钻判据：复述精确冲突前回原文核验） -->
+  <div class="step" data-type="read">
+    <div class="step-header">
+      <span class="step-num">14</span>
+      <span class="step-badge">VERIFY</span>
+      <span class="step-title">★ 复述精确冲突前 · read-block 回原文核验</span>
+    </div>
+    <div class="step-body">
+      <div class="thinking">答案要照搬 GraphRAG vs LightRAG 的逐字论断、还点到"实验数字依赖 LLM-as-judge"，而第 6 步 <code>read_page</code> 只拿到 concept 页骨架（锚点清单、没有冲突块全文）。按<strong>细节下钻判据</strong>，组装答案前先 <code>read-block</code> 打开冲突锚 <code>^p-8-1775c9</code> 取回逐字原文：
+        <br>· 核对 LightRAG §3.4 "markedly reduces retrieval overhead…" 的精确措辞
+        <br>· 确认"两个工程论断真实、但实验数字依赖 LLM-as-judge 需谨慎"的限定没被放大
+        <br>· 标出答案里那条裸引用 <span class="citation">[[wiki/sources/lightrag]]</span> 粒度不足、应补块级锚（<code>list-coarse-citations</code> 会扫到）
+        <br>→ 定义 / 概览类（A 类）问题不触发；此处因要照搬对立双方的精确论断与数字才下钻。
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 15 ANSWER -->
+  <div class="step" data-type="answer">
+    <div class="step-header">
+      <span class="step-num">15</span>
+      <span class="step-badge">ANSWER</span>
+      <span class="step-title">组合带 anchor 的结构化答案</span>
+    </div>
+    <div class="step-body">
+      <div class="answer-panel">
+        <h3>Agent 最终回复</h3>
+
+        <h4>要不要上 Graph RAG</h4>
+        <p>取决于你的 query 类型——<strong>global sensemaking / 主题总结</strong>类收益大；<strong>简单 factoid / 单跳 QA</strong> 未必值回 index time 成本 <span class="citation">[[wiki/analyses/three_graph_rag_families#^p-6-942640]]</span>。</p>
+
+        <h4>社区检测是必须的吗（★ 真实分歧，不给单一结论）</h4>
+        <ul>
+          <li>GraphRAG（MSR）：社区检测 + 层次摘要是核心架构 <span class="citation">[[wiki/sources/graphrag#^h-2-3-c08b6a]]</span></li>
+          <li>LightRAG（HKU）<strong>反驳</strong>：社区检测是不必要的复杂度，dual-level retrieval 拿到大部分收益且支持增量更新 <span class="citation">[[wiki/sources/lightrag]]</span></li>
+          <li>知识库判断：两个工程论断真实（复杂度↑ + GraphRAG 不支持增量更新），但实验数字依赖 LLM-as-judge 需谨慎；状态 <strong>keep_watching</strong> <span class="citation">[[wiki/concepts/graph_rag#^p-8-1775c9]]</span></li>
+        </ul>
+
+        <h4>更上层的综合</h4>
+        <p>真正的分歧其实是"<strong>扩充 corpus 派 vs 辅助 retrieval 派</strong>"——选型应按你的任务谱（sensemaking vs 全谱 QA）来定，而非"谁更好" <span class="citation">[[wiki/analyses/three_graph_rag_families#^p-6-942640]]</span>。</p>
+
+        <h4>相关 wiki 页面（深入阅读）</h4>
+        <p><span class="citation">[[wiki/concepts/graph_rag]]</span> · <span class="citation">[[wiki/analyses/three_graph_rag_families]]</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="rag-compare">
+  <span class="label">⚠️ 传统 chunk-RAG 会怎样（论证性对比 · 不是本页实测）</span>
+  <p class="rag-meta">本页 KB 本身不跑 chunk-RAG（设计原则 1:知识库不调用 LLM；原则 4:严禁 embedding 召回）。下面这段是按教科书级 chunk-RAG 范式推演的「会出什么问题」，与本页其它步骤不同——前者是真实跑出来的轨迹数据，后者是论证。</p>
+  <p>1. 把 GraphRAG / LightRAG / HippoRAG 几篇论文切成 200-500 token chunks → 大概几十个片段</p>
+  <p>2. 用 embedding 找 top-K（通常 K=5）→ 返回 5 个语义相似 chunk</p>
+  <p>3. 塞给 LLM 综合 → 它会把"GraphRAG 说社区检测是核心"和"LightRAG 说没必要"两类 chunk <strong>平均</strong>成一句中庸的"社区检测通常有帮助"——<strong>真实的架构分歧被抹平</strong></p>
+  <p>4. 引用粒度 = chunk（含上下文噪声）→ 用户无法反查到是哪篇论文的哪段，更看不到 <code>keep_watching</code> 这种"未决"状态</p>
+  <p>5. 失败模式：<strong>冲突不可见</strong> —— 用户拿到一个看似中立、实则失真的答案，错过"这是一场未决之争、要按 query 类型选型"这个最关键的判断</p>
+</div>
+
+</div>
