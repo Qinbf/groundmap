@@ -42,7 +42,7 @@
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",
     "concurrently": "^10.0.3",
-    "eslint": "^8.57.1",
+    "eslint": "^10.5.0",
     "eslint-config-next": "^14.2.35",
     "postcss": "^8.4.49",
     "puppeteer-core": "^25.1.0",
